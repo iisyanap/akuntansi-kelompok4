@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Sistem Akuntansi{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242838;
+  --border: #2e3347;
+  --accent: #4f8ef7;
+  --accent2: #38d9a9;
+  --danger: #f76f6f;
+  --warn: #f7c94f;
+  --text: #e8eaf0;
+  --text2: #8b91a8;
+  --text3: #5a6080;
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --radius: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* SIDEBAR */
+.layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 240px; min-height: 100vh; background: var(--surface);
+  border-right: 1px solid var(--border); position: fixed; top: 0; left: 0;
+  display: flex; flex-direction: column; z-index: 100;
+}
+.sidebar-logo {
+  padding: 24px 20px; border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 700; letter-spacing: 2px;
+  color: var(--accent); text-transform: uppercase;
+}
+.sidebar-logo span { display: block; font-size: 10px; color: var(--text3); font-weight: 400; letter-spacing: 1px; margin-top: 2px; }
+.nav { padding: 16px 0; flex: 1; }
+.nav-group { margin-bottom: 8px; }
+.nav-label { padding: 6px 20px; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-weight: 600; }
+.nav a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; color: var(--text2); text-decoration: none;
+  font-size: 13px; font-weight: 500; transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+.nav a:hover { color: var(--text); background: var(--surface2); }
+.nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(79,142,247,0.08); }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; }
+.nav-step {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--surface2);
+  border: 1px solid var(--border); font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; color: var(--text3);
+  flex-shrink: 0;
+}
+.nav a.active .nav-step { background: var(--accent); border-color: var(--accent); color: white; }
+.sidebar-bottom { padding: 16px; border-top: 1px solid var(--border); }
+.btn-reset {
+  width: 100%; padding: 8px; background: transparent; border: 1px solid var(--border);
+  color: var(--text3); border-radius: var(--radius); cursor: pointer; font-size: 12px;
+  font-family: var(--font); transition: all 0.15s;
+}
+.btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+/* MAIN */
+.main { margin-left: 240px; flex: 1; padding: 32px; min-height: 100vh; }
+.page-header { margin-bottom: 28px; }
+.page-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+.page-header p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.company-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--text2);
+  margin-bottom: 16px;
+}
+.company-tag strong { color: var(--accent); }
+
+/* CARDS */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+}
+.card-title { font-size: 13px; font-weight: 600; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+
+/* TABLES */
+.tbl-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: var(--surface2); color: var(--text2); font-weight: 600;
+  font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;
+  padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+thead th.num { text-align: right; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+tbody td { padding: 10px 14px; color: var(--text); vertical-align: middle; }
+tbody td.num { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--text2); }
+tbody td.debit-val { color: #f76f6f; font-family: var(--mono); text-align: right; }
+tbody td.kredit-val { color: var(--accent2); font-family: var(--mono); text-align: right; }
+tbody td.acc-name { font-weight: 500; }
+tbody td.sub-entry { padding-left: 32px; color: var(--text2); font-style: italic; }
+.tbl-footer td { background: var(--surface2); font-weight: 700; border-top: 2px solid var(--border); }
+.tbl-footer td.num { font-family: var(--mono); font-size: 12px; }
+
+/* FORMS */
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.5px; }
+input[type=text], input[type=date], input[type=number], select, textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 9px 12px; color: var(--text);
+  font-family: var(--font); font-size: 13px; transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+select option { background: var(--surface); }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: var(--radius); border: none;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #3a7bf0; }
+.btn-success { background: var(--accent2); color: #0f1117; }
+.btn-success:hover { background: #2ec99a; }
+.btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 6px 12px; font-size: 12px; }
+.btn-danger:hover { background: var(--danger); color: white; }
+.btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--text3); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+
+/* ENTRY ROWS */
+.entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.entry-row input, .entry-row select { flex: 1; }
+.entry-row .btn-remove { flex-shrink: 0; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; }
+
+/* ALERT */
+.alert { padding: 12px 16px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px; }
+.alert-error { background: rgba(247,111,111,0.1); border: 1px solid rgba(247,111,111,0.3); color: var(--danger); }
+.alert-success { background: rgba(56,217,169,0.1); border: 1px solid rgba(56,217,169,0.3); color: var(--accent2); }
+.alert-info { background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.3); color: var(--accent); }
+
+/* BADGES */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+.badge-debit { background: rgba(247,111,111,0.15); color: var(--danger); }
+.badge-kredit { background: rgba(56,217,169,0.15); color: var(--accent2); }
+.badge-neutral { background: var(--surface2); color: var(--text2); }
+
+/* STAT CARDS */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.stat-value { font-size: 20px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.stat-value.positive { color: var(--accent2); }
+.stat-value.negative { color: var(--danger); }
+
+/* PRINT */
+@media print {
+  .sidebar, .btn, .no-print { display: none !important; }
+  .main { margin-left: 0; padding: 0; }
+  body { background: white; color: black; }
+  table { font-size: 11px; }
+  .tbl-wrap { border: 1px solid #ccc; }
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      AccSys <span>Sistem Akuntansi</span>
+    </div>
+    <nav class="nav">
+      <div class="nav-group">
+        <div class="nav-label">Setup</div>
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+          <span class="nav-step">0</span> Setup Perusahaan
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Siklus Akuntansi</div>
+        <a href="{{ url_for('jurnal') }}" class="{% if request.endpoint == 'jurnal' %}active{% endif %}">
+          <span class="nav-step">1</span> Jurnal Umum
+        </a>
+        <a href="{{ url_for('buku_besar') }}" class="{% if request.endpoint == 'buku_besar' %}active{% endif %}">
+          <span class="nav-step">2</span> Buku Besar
+        </a>
+        <a href="{{ url_for('neraca_saldo') }}" class="{% if request.endpoint == 'neraca_saldo' %}active{% endif %}">
+          <span class="nav-step">3</span> Neraca Saldo
+        </a>
+        <a href="{{ url_for('penyesuaian') }}" class="{% if request.endpoint == 'penyesuaian' %}active{% endif %}">
+          <span class="nav-step">4</span> Jurnal Penyesuaian
+        </a>
+        <a href="{{ url_for('kertas_kerja') }}" class="{% if request.endpoint == 'kertas_kerja' %}active{% endif %}">
+          <span class="nav-step">5</span> Kertas Kerja
+        </a>
+        <a href="{{ url_for('laporan') }}" class="{% if request.endpoint == 'laporan' %}active{% endif %}">
+          <span class="nav-step">6</span> Laporan Keuangan
+        </a>
+        <a href="{{ url_for('jurnal_penutup') }}" class="{% if request.endpoint == 'jurnal_penutup' %}active{% endif %}">
+          <span class="nav-step">7</span> Jurnal Penutup
+        </a>
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      {% if currency %}
+      <div style="font-size:11px; color:var(--text3); margin-bottom:8px; text-align:center;">
+        Mata Uang: <strong style="color:var(--accent);">{{ currency }} ({{ currency_symbol }})</strong>
+      </div>
+      {% endif %}
+      <form method="POST" action="{{ url_for('reset') }}" onsubmit="return confirm('Reset semua data?')">
+        <button type="submit" class="btn-reset">⟳ Reset / Mulai Ulang</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

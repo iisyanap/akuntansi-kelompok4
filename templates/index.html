@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Setup Perusahaan{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>⚙️ Setup Perusahaan</h1>
+  <p>Isi data perusahaan sebelum memulai siklus akuntansi</p>
+</div>
+
+<div style="max-width: 680px;">
+  <form method="POST" action="{{ url_for('setup') }}">
+    <div class="card">
+      <div class="card-title">Informasi Perusahaan</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="form-group">
+          <label>Nama Perusahaan</label>
+          <input type="text" name="nama_perusahaan" placeholder="cth: Service Mesin Cuci Amir" value="{{ perusahaan.nama or '' }}" required>
+        </div>
+        <div class="form-group">
+          <label>Nama Pemilik</label>
+          <input type="text" name="nama_pemilik" placeholder="cth: Tuan Amir Makmur" value="{{ perusahaan.pemilik or '' }}" required>
+        </div>
+        <div class="form-group">
+          <label>Periode (Bulan & Tahun)</label>
+          <input type="text" name="periode" placeholder="cth: April 2008" value="{{ perusahaan.periode or '' }}" required>
+        </div>
+        <div class="form-group">
+          <label>Jenis Usaha</label>
+          <input type="text" name="jenis_usaha" placeholder="cth: Perusahaan Jasa" value="{{ perusahaan.jenis or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Mata Uang</label>
+          <select name="currency">
+            <option value="IDR" {% if perusahaan.currency != 'USD' %}selected{% endif %}>🇮🇩 Rupiah (IDR — Rp)</option>
+            <option value="USD" {% if perusahaan.currency == 'USD' %}selected{% endif %}>🇺🇸 Dollar (USD — $)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Saldo Awal (Opsional)</div>
+      <p style="font-size:12px; color:var(--text2); margin-bottom:16px;">
+        Isi jika ada neraca saldo awal dari periode sebelumnya (seperti Latihan 2). Kosongkan jika perusahaan baru.
+      </p>
+      <div id="ob-list">
+        <div class="alert alert-info" style="font-size:12px;">
+          💡 Contoh: Kas → Debit: 119.000.000 | Piutang Usaha → Debit: 11.500.000
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addOBRow()">+ Tambah Akun Saldo Awal</button>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
+      Simpan & Mulai → Jurnal Umum
+    </button>
+  </form>
+</div>
+
+{% if perusahaan and perusahaan.nama %}
+<div style="margin-top:24px;" class="card">
+  <div class="card-title">Data Tersimpan</div>
+  <p style="color:var(--accent2); font-size:13px;">✓ Perusahaan: <strong>{{ perusahaan.nama }}</strong> | Pemilik: {{ perusahaan.pemilik }} | Periode: {{ perusahaan.periode }}</p>
+  <div style="margin-top:12px;">
+    <a href="{{ url_for('jurnal') }}" class="btn btn-success">→ Lanjut ke Jurnal Umum</a>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function addOBRow() {
+  const list = document.getElementById('ob-list');
+  const row = document.createElement('div');
+  row.className = 'entry-row';
+  row.innerHTML = `
+    <input type="text" name="ob_account" placeholder="Nama Akun (cth: Kas)" style="flex:2">
+    <input type="number" name="ob_debit" placeholder="Debit" min="0" style="flex:1">
+    <input type="number" name="ob_kredit" placeholder="Kredit" min="0" style="flex:1">
+    <button type="button" class="btn btn-danger btn-remove btn-sm" onclick="this.parentElement.remove()">✕</button>
+  `;
+  list.appendChild(row);
+}
+</script>
+{% endblock %}

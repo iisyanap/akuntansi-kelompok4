@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Laporan Keuangan{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="company-tag"><strong>{{ perusahaan.nama }}</strong> · {{ perusahaan.periode }}</div>
+  <h1>📊 Laporan Keuangan</h1>
+  <p>Laporan Laba Rugi · Perubahan Modal · Neraca</p>
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:20px;" class="no-print">
+  <a href="{{ url_for('jurnal_penutup') }}" class="btn btn-success">→ Jurnal Penutup</a>
+  <a href="{{ url_for('export_laporan_route') }}" class="btn btn-ghost">📥 Export Excel</a>
+  <button onclick="window.print()" class="btn btn-ghost">🖨 Print</button>
+</div>
+
+{% set lr = laporan.laba_rugi %}
+{% set pm = laporan.perubahan_modal %}
+{% set ner = laporan.neraca %}
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+
+<!-- LABA RUGI -->
+<div class="card" style="grid-column: 1 / -1;">
+  <div style="text-align:center; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+    <div style="font-weight:700; font-size:15px; color:var(--text);">{{ laporan.nama_perusahaan }}</div>
+    <div style="color:var(--text2); font-size:13px;">Laporan Laba Rugi / Income Statement</div>
+    <div style="color:var(--text2); font-size:13px;">Untuk Periode yang Berakhir {{ laporan.periode }}</div>
+  </div>
+  <div style="max-width:500px; margin:0 auto;">
+    <div style="font-weight:600; color:var(--accent2); margin-bottom:8px; font-size:13px;">PENDAPATAN</div>
+    {% for akun, jml in lr.pendapatan %}
+    <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
+      <span style="color:var(--text2); padding-left:16px;">{{ akun }}</span>
+      <span style="font-family:var(--mono);">{{ jml | fmt_currency(currency) }}</span>
+    </div>
+    {% endfor %}
+    <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--border); font-weight:700; margin-top:4px;">
+      <span>Total Pendapatan</span>
+      <span style="font-family:var(--mono); color:var(--accent2);">Rp {{ lr.total_pendapatan | fmt_currency(currency) }}</span>
+    </div>
+
+    <div style="font-weight:600; color:var(--danger); margin:16px 0 8px; font-size:13px;">BEBAN USAHA</div>
+    {% for akun, jml in lr.beban %}
+    <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
+      <span style="color:var(--text2); padding-left:16px;">{{ akun }}</span>
+      <span style="font-family:var(--mono);">{{ jml | fmt_currency(currency) }}</span>
+    </div>
+    {% endfor %}
+    <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--border); font-weight:700; margin-top:4px;">
+      <span>Total Beban</span>
+      <span style="font-family:var(--mono); color:var(--danger);">Rp {{ lr.total_beban | fmt_currency(currency) }}</span>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; padding:12px 16px; border-radius:8px; font-weight:700; font-size:15px; margin-top:8px;
+      {% if lr.laba_bersih >= 0 %}background:rgba(56,217,169,0.1); border:1px solid rgba(56,217,169,0.3);{% else %}background:rgba(247,111,111,0.1); border:1px solid rgba(247,111,111,0.3);{% endif %}">
+      <span>{% if lr.laba_bersih >= 0 %}LABA BERSIH{% else %}RUGI BERSIH{% endif %}</span>
+      <span style="font-family:var(--mono); {% if lr.laba_bersih >= 0 %}color:var(--accent2){% else %}color:var(--danger){% endif %};">
+        Rp {{ lr.laba_bersih|abs | fmt_currency(currency) }}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- PERUBAHAN MODAL -->
+<div class="card">
+  <div style="text-align:center; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+    <div style="font-weight:700; font-size:14px; color:var(--text);">{{ laporan.nama_perusahaan }}</div>
+    <div style="color:var(--text2); font-size:12px;">Laporan Perubahan Modal</div>
+    <div style="color:var(--text2); font-size:12px;">{{ laporan.periode }}</div>
+  </div>
+  <div style="font-size:13px;">
+    <div style="display:flex; justify-content:space-between; padding:6px 0;">
+      <span style="color:var(--text2);">Modal Awal {{ laporan.nama_pemilik }}</span>
+      <span style="font-family:var(--mono);">{{ pm.modal_awal | fmt_currency(currency) }}</span>
+    </div>
+    <div style="display:flex; justify-content:space-between; padding:6px 0;">
+      <span style="color:{% if pm.laba_bersih >= 0 %}var(--accent2){% else %}var(--danger){% endif %}; padding-left:16px;">
+        {% if pm.laba_bersih >= 0 %}(+) Laba Bersih{% else %}(-) Rugi Bersih{% endif %}
+      </span>
+      <span style="font-family:var(--mono); color:{% if pm.laba_bersih >= 0 %}var(--accent2){% else %}var(--danger){% endif %};">
+        {{ pm.laba_bersih|abs | fmt_currency(currency) }}
+      </span>
+    </div>
+    {% if pm.prive > 0 %}
+    <div style="display:flex; justify-content:space-between; padding:6px 0;">
+      <span style="color:var(--danger); padding-left:16px;">(-) Prive {{ laporan.nama_pemilik }}</span>
+      <span style="font-family:var(--mono); color:var(--danger);">{{ pm.prive | fmt_currency(currency) }}</span>
+    </div>
+    {% endif %}
+    <div style="display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--border); font-weight:700; margin-top:4px;">
+      <span>Modal Akhir</span>
+      <span style="font-family:var(--mono); color:var(--accent);">Rp {{ pm.modal_akhir | fmt_currency(currency) }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- NERACA -->
+<div class="card">
+  <div style="text-align:center; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+    <div style="font-weight:700; font-size:14px; color:var(--text);">{{ laporan.nama_perusahaan }}</div>
+    <div style="color:var(--text2); font-size:12px;">Neraca / Balance Sheet</div>
+    <div style="color:var(--text2); font-size:12px;">Per {{ laporan.periode }}</div>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:13px;">
+    <div>
+      <div style="font-weight:600; color:var(--accent); margin-bottom:8px;">HARTA (ASSETS)</div>
+      {% for akun, jml in ner.assets %}
+      <div style="display:flex; justify-content:space-between; padding:4px 0;">
+        <span style="color:var(--text2); padding-left:12px;">{{ akun }}</span>
+        <span style="font-family:var(--mono);">{{ jml | fmt_currency(currency) }}</span>
+      </div>
+      {% endfor %}
+      {% for akun, jml in ner.contra_assets %}
+      <div style="display:flex; justify-content:space-between; padding:4px 0;">
+        <span style="color:var(--danger); padding-left:16px;">({{ akun }})</span>
+        <span style="font-family:var(--mono); color:var(--danger);">({{ jml | fmt_currency(currency) }})</span>
+      </div>
+      {% endfor %}
+      <div style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; font-weight:700; display:flex; justify-content:space-between;">
+        <span>Total Harta</span>
+        <span style="font-family:var(--mono); color:var(--accent);">{{ "{:,.0f}".format(ner.assets|sum(attribute='1') - ner.contra_assets|sum(attribute='1')) }}</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:600; color:var(--danger); margin-bottom:8px;">KEWAJIBAN & MODAL</div>
+      {% for akun, jml in ner.liabilities %}
+      <div style="display:flex; justify-content:space-between; padding:4px 0;">
+        <span style="color:var(--text2); padding-left:12px;">{{ akun }}</span>
+        <span style="font-family:var(--mono);">{{ jml | fmt_currency(currency) }}</span>
+      </div>
+      {% endfor %}
+      <div style="display:flex; justify-content:space-between; padding:4px 0; margin-top:8px;">
+        <span style="color:var(--text2); padding-left:12px;">Modal {{ laporan.nama_pemilik }}</span>
+        <span style="font-family:var(--mono);">{{ ner.modal_akhir | fmt_currency(currency) }}</span>
+      </div>
+      <div style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; font-weight:700; display:flex; justify-content:space-between;">
+        <span>Total K + Modal</span>
+        <span style="font-family:var(--mono); color:var(--accent);">{{ "{:,.0f}".format(ner.liabilities|sum(attribute='1') + ner.modal_akhir) }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+{% endblock %}

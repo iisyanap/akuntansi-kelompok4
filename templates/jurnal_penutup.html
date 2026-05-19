@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Jurnal Penutup{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="company-tag"><strong>{{ perusahaan.nama }}</strong> · {{ perusahaan.periode }}</div>
+  <h1>🔒 Jurnal Penutup</h1>
+  <p>Menutup akun-akun nominal (pendapatan, beban, prive) ke Modal</p>
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:20px;" class="no-print">
+  <a href="{{ url_for('export_jurnal_penutup_route') }}" class="btn btn-ghost">📥 Export Excel</a>
+  <button onclick="window.print()" class="btn btn-ghost">🖨 Print</button>
+  <a href="{{ url_for('index') }}" class="btn btn-ghost">⟳ Mulai Periode Baru</a>
+</div>
+
+<div class="alert alert-info" style="font-size:12px;">
+  <strong>Urutan Jurnal Penutup:</strong><br>
+  1️⃣ Tutup semua akun Pendapatan → Ikhtisar Laba Rugi &nbsp;|&nbsp;
+  2️⃣ Tutup semua akun Beban → Ikhtisar Laba Rugi &nbsp;|&nbsp;
+  3️⃣ Tutup Ikhtisar L/R → Modal &nbsp;|&nbsp;
+  4️⃣ Tutup Prive → Modal
+</div>
+
+<div class="card">
+  <div style="text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border);">
+    <div style="font-weight:700; font-size:15px;">{{ perusahaan.nama }}</div>
+    <div style="color:var(--text2); font-size:13px;">Jurnal Penutup / Closing Entries</div>
+    <div style="color:var(--text2); font-size:13px;">{{ perusahaan.periode }}</div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tanggal</th>
+          <th>Nama Akun / Keterangan</th>
+          <th>Ref</th>
+          <th class="num">{% if currency == "USD" %}Debit ($){% else %}Debit (Rp){% endif %}</th>
+          <th class="num">{% if currency == "USD" %}Kredit ($){% else %}Kredit (Rp){% endif %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set loop_total_d = namespace(v=0) %}
+        {% set loop_total_k = namespace(v=0) %}
+        {% for i, e in jurnal_penutup | enumerate %}
+        <!-- Debit -->
+        {% for j, item in e.debit_entries | enumerate %}
+        <tr>
+          {% if j == 0 %}<td rowspan="{{ e.debit_entries|length + e.kredit_entries|length }}">{{ e.tanggal }}</td>{% endif %}
+          <td class="acc-name">{{ item.akun }}</td>
+          <td><span class="badge" style="background:rgba(79,142,247,0.15);color:var(--accent);">JP{{ i+1 }}</span></td>
+          <td class="debit-val">{{ item.jumlah | fmt_currency(currency) }}</td>
+          <td></td>
+        </tr>
+        {% set loop_total_d.v = loop_total_d.v + item.jumlah %}
+        {% endfor %}
+        <!-- Kredit -->
+        {% for item in e.kredit_entries %}
+        <tr>
+          <td class="sub-entry">{{ item.akun }}</td>
+          <td><span class="badge" style="background:rgba(79,142,247,0.15);color:var(--accent);">JP{{ i+1 }}</span></td>
+          <td></td>
+          <td class="kredit-val">{{ item.jumlah | fmt_currency(currency) }}</td>
+        </tr>
+        {% set loop_total_k.v = loop_total_k.v + item.jumlah %}
+        {% endfor %}
+        <!-- Keterangan -->
+        <tr style="background:rgba(255,255,255,0.02);">
+          <td colspan="5" style="color:var(--text3); font-size:11px; padding:5px 14px; font-style:italic;">
+            📝 {{ e.keterangan }}
+          </td>
+        </tr>
+        <tr style="height:6px; background:var(--bg);"><td colspan="5"></td></tr>
+        {% endfor %}
+        <tr class="tbl-footer">
+          <td colspan="3">T O T A L</td>
+          <td class="num debit-val">{{ loop_total_d.v | fmt_currency(currency) }}</td>
+          <td class="num kredit-val">{{ loop_total_k.v | fmt_currency(currency) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="border-color:rgba(56,217,169,0.3); background:rgba(56,217,169,0.05);">
+  <div class="card-title" style="color:var(--accent2);">✅ Siklus Akuntansi Selesai!</div>
+  <p style="font-size:13px; color:var(--text2);">
+    Semua akun nominal telah ditutup. Akun riil (Harta, Utang, Modal) siap dibawa ke periode berikutnya.
+  </p>
+</div>
+{% endblock %}

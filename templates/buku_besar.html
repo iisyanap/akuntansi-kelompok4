@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Buku Besar{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="company-tag"><strong>{{ perusahaan.nama }}</strong> · {{ perusahaan.periode }}</div>
+  <h1>📚 Buku Besar</h1>
+  <p style="font-size:13px; color:var(--text2);">{{ perusahaan.nama }} &nbsp;·&nbsp; Buku Besar / General Ledger &nbsp;·&nbsp; Per {{ perusahaan.periode }}</p>
+</div>
+
+<div style="display:flex; gap:10px; margin-bottom:20px;" class="no-print">
+  <a href="{{ url_for('neraca_saldo') }}" class="btn btn-success">→ Neraca Saldo</a>
+  <a href="{{ url_for('export_buku_besar_route') }}" class="btn btn-ghost">📥 Export Excel</a>
+  <button onclick="window.print()" class="btn btn-ghost">🖨 Print</button>
+  <a href="{{ url_for('jurnal') }}" class="btn btn-ghost">← Jurnal</a>
+</div>
+
+<div style="columns: 1; column-gap: 20px;">
+{% for akun, rows in buku_besar.items() %}
+<div class="card" style="break-inside: avoid; margin-bottom: 20px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <div>
+      <span class="card-title" style="margin:0; font-size:14px; color:var(--text);">{{ akun }}</span>
+    </div>
+    <div style="text-align:right;">
+      {% set last = rows[-1] %}
+      {% if last.saldo_d %}
+        <span class="badge badge-debit">SALDO D: Rp {{ last.saldo_d | fmt_currency(currency) }}</span>
+      {% elif last.saldo_k %}
+        <span class="badge badge-kredit">SALDO K: Rp {{ last.saldo_k | fmt_currency(currency) }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tgl</th>
+          <th>Keterangan</th>
+          <th>Ref</th>
+          <th class="num">Debit</th>
+          <th class="num">Kredit</th>
+          <th class="num">Saldo D</th>
+          <th class="num">Saldo K</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td style="white-space:nowrap; font-size:11px;">{{ row.tanggal }}</td>
+          <td style="font-size:12px;">{{ row.keterangan }}</td>
+          <td>
+            {% if row.source == 'JU' %}
+            <span class="badge badge-neutral">JU</span>
+            {% elif row.source == 'AJP' %}
+            <span class="badge" style="background:rgba(247,201,79,0.15); color:var(--warn);">AJP</span>
+            {% else %}
+            <span class="badge badge-neutral">—</span>
+            {% endif %}
+          </td>
+          <td class="debit-val">{{ row.debit | fmt_currency(currency) if row.debit else "" }}</td>
+          <td class="kredit-val">{{ row.kredit | fmt_currency(currency) if row.kredit else "" }}</td>
+          <td class="num" style="color:var(--danger);">{{ row.saldo_d | fmt_currency(currency) if row.saldo_d else "" }}</td>
+          <td class="num" style="color:var(--accent2);">{{ row.saldo_k | fmt_currency(currency) if row.saldo_k else "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}
