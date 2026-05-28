@@ -120,7 +120,7 @@
     {% if perusahaan.periode %} · {{ perusahaan.periode }}{% endif %}
   </div>
   <h1>✦ AI Asisten Akuntansi</h1>
-  <p>Ketik transaksi dalam bahasa natural — AI akan parse menjadi jurnal otomatis.</p>
+  <p>Ketik transaksi dalam bahasa natural — AI akan parse menjadi jurnal otomatis. Didukung Groq + LangChain Memory.</p>
 </div>
 
 <!-- API Key setup (awal) -->
@@ -235,6 +235,24 @@
         </button>
       </div>
     </div>
+
+    <!-- Model selector -->
+    <div style="background:var(--surface); border:1px solid var(--border);
+                border-radius:var(--radius); padding:14px; flex-shrink:0;">
+      <div style="font-size:10px; color:var(--text3); margin-bottom:8px;
+                  font-weight:700; letter-spacing:1px;">MODEL</div>
+      <div class="model-selector" id="model-selector">
+        <div class="model-chip selected" onclick="selectModel(this,'llama-3.1-8b-instant')">Llama 3.1 8B ⚡</div>
+        <div class="model-chip" onclick="selectModel(this,'llama-3.3-70b-versatile')">Llama 3.3 70B</div>
+        <div class="model-chip" onclick="selectModel(this,'mixtral-8x7b-32768')">Mixtral 8x7B</div>
+      </div>
+      {% if key_from_env %}
+      <div style="font-size:11px; color:#2a9e65; margin-top:8px; display:flex; align-items:center; gap:5px;">
+        <span>✓</span> API Key aktif dari <code>.env</code>
+      </div>
+      {% endif %}
+    </div>
+
   </div>
 </div>
 
@@ -381,23 +399,12 @@ function scrollToBottom() {
   box.scrollTop = box.scrollHeight;
 }
 
-// ── Memory Panel ─────────────────────────────────────────────────
+// ── Memory Panel (disederhanakan — elemen sudah dihapus dari UI) ──────
 function updateMemoryPanel(history) {
   const count = history.length;
-  document.getElementById('mem-count').textContent = count;
-  document.getElementById('mem-count-badge').textContent = `💬 ${count} pesan tersimpan`;
-
-  const list = document.getElementById('memory-list');
-  list.innerHTML = '';
-  history.slice(-6).forEach(msg => {
-    const d = document.createElement('div');
-    d.className = 'memory-item';
-    const role = msg.role === 'human' ? 'mi-user' : 'mi-ai';
-    const label = msg.role === 'human' ? '👤 Kamu' : '✦ AI';
-    const preview = msg.content.length > 80 ? msg.content.substring(0,80) + '…' : msg.content;
-    d.innerHTML = `<div class="mi-role ${role}">${label}</div>${preview}`;
-    list.appendChild(d);
-  });
+  // Update context bar badge kalau masih ada
+  const badge = document.getElementById('mem-count-badge');
+  if (badge) badge.textContent = `💬 ${count} pesan tersimpan`;
 }
 
 async function clearMemory() {
