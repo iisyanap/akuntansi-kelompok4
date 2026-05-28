@@ -510,6 +510,25 @@ def debug_ai_test():
     results["env_file"] = str(__import__('os').path.exists(".env"))
     return jsonify(results)
 
+# ── Setup perusahaan via AI ────────────────────────────────────────────────
+@app.route("/ai/setup_company", methods=["POST"])
+def ai_setup_company():
+    body = request.get_json() or {}
+    nama    = body.get("nama", "").strip()
+    pemilik = body.get("pemilik", "").strip()
+    periode = body.get("periode", "").strip()
+    jenis   = body.get("jenis", "").strip()
+    currency= body.get("currency", "IDR").strip()
+    if not nama:
+        return jsonify({"success": False, "error": "Nama perusahaan wajib diisi"})
+    data = get_data()
+    data["perusahaan"] = {
+        "nama": nama, "pemilik": pemilik,
+        "periode": periode, "jenis": jenis, "currency": currency
+    }
+    save_data(data)
+    return jsonify({"success": True, "perusahaan": data["perusahaan"]})
+
 # ── Clear memory ───────────────────────────────────────────────────────────
 @app.route("/ai/clear_memory", methods=["POST"])
 def ai_clear_memory():

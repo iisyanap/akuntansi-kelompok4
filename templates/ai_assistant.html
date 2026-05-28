@@ -169,11 +169,12 @@
       <div class="ai-bubble assistant">
         <div class="bubble-label">✦ AccSys AI</div>
         Halo! Saya asisten akuntansi AccSys. 👋<br><br>
-        Saya bisa membantu kamu membuat <strong>jurnal umum</strong> dan
-        <strong>jurnal penyesuaian</strong> dari deskripsi transaksi.<br><br>
-        Cukup ceritakan transaksinya, misalnya:<br>
-        <em style="color:var(--text2);">"01 April, Tuan Amir investasi uang pribadi Rp 152.234.125 dan peralatan Rp 51.270.130"</em><br><br>
-        Saya sudah tahu konteks perusahaan kamu. Mulai ketik di bawah! 🚀
+        Saya bisa membantu kamu:<br>
+        • <strong>Setup perusahaan</strong> — cukup ceritakan nama, pemilik, periode<br>
+        • <strong>Buat jurnal umum</strong> dari deskripsi transaksi<br>
+        • <strong>Buat jurnal penyesuaian</strong> di akhir periode<br><br>
+        Contoh setup: <em style="color:var(--text2);">"Setup perusahaan: Tuan Amir Makmur, pemilik Tuan Amir, periode April 2008, usaha service mesin cuci, IDR"</em><br><br>
+        Mulai ketik di bawah! 🚀
       </div>
       {% else %}
       {% for msg in chat_history %}
@@ -193,10 +194,10 @@
     <div class="ai-footer">
       <!-- Hint chips -->
       <div class="ai-hints" id="hint-chips">
+        <span class="ai-hint-chip" onclick="setHint(this)">🏢 Setup perusahaan baru</span>
         <span class="ai-hint-chip" onclick="setHint(this)">💰 Investasi modal awal</span>
         <span class="ai-hint-chip" onclick="setHint(this)">🛒 Pembelian perlengkapan tunai</span>
         <span class="ai-hint-chip" onclick="setHint(this)">📋 Penerimaan pendapatan jasa</span>
-        <span class="ai-hint-chip" onclick="setHint(this)">💸 Pembayaran beban gaji</span>
         <span class="ai-hint-chip" onclick="setHint(this)">⚙️ Bantu jurnal penyesuaian</span>
       </div>
       <div class="ai-input-row">
@@ -324,9 +325,14 @@ async function sendMessage() {
       appendAssistantBubble(data.response_html);
       updateMemoryPanel(data.chat_history);
 
-      // Handle parsed entries
       if (data.entries && data.entries.length > 0) {
-        data.entries.forEach(e => addPendingEntry(e));
+        data.entries.forEach(e => {
+          if (e.type === 'company_setup') {
+            addCompanySetupEntry(e);
+          } else {
+            addPendingEntry(e);
+          }
+        });
       }
     }
   } catch (err) {
@@ -520,10 +526,10 @@ function updatePendingCount() {
 // ── Hint chips ───────────────────────────────────────────────────
 function setHint(el) {
   const hints = {
+    '🏢 Setup perusahaan baru': 'Setup perusahaan baru untuk saya: nama perusahaaan, nama pemilik, periode, jenis perusahaan, mata uang',
     '💰 Investasi modal awal': 'Bantu buat jurnal investasi modal awal pemilik',
     '🛒 Pembelian perlengkapan tunai': 'Catat pembelian perlengkapan secara tunai',
     '📋 Penerimaan pendapatan jasa': 'Catat penerimaan kas dari pendapatan jasa',
-    '💸 Pembayaran beban gaji': 'Catat pembayaran beban gaji karyawan',
     '⚙️ Bantu jurnal penyesuaian': 'Bantu saya membuat jurnal penyesuaian untuk periode ini'
   };
   document.getElementById('user-input').value = hints[el.textContent] || el.textContent;
@@ -544,6 +550,72 @@ function showToast(msg) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+// ── Company Setup dari AI ────────────────────────────────────────
+function addCompanySetupEntry(data) {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = 'ai-bubble assistant';
+  div.style.cssText = 'align-self:flex-start; max-width:90%; border:1.5px solid var(--border2);';
+  div.innerHTML = `
+    <div class="bubble-label" style="color:var(--sky-blue);">🏢 SETUP PERUSAHAAN</div>
+    <div style="font-size:13px; margin-bottom:10px;">
+      AI mendeteksi data perusahaan. Konfirmasi untuk menyimpan:
+    </div>
+    <table style="width:100%; font-size:12px; border-collapse:collapse; margin-bottom:10px;">
+      <tr><td style="color:var(--text3); padding:3px 0; width:90px;">Nama</td>
+          <td style="font-weight:600;">${data.nama || '-'}</td></tr>
+      <tr><td style="color:var(--text3); padding:3px 0;">Pemilik</td>
+          <td style="font-weight:600;">${data.pemilik || '-'}</td></tr>
+      <tr><td style="color:var(--text3); padding:3px 0;">Periode</td>
+          <td style="font-weight:600;">${data.periode || '-'}</td></tr>
+      <tr><td style="color:var(--text3); padding:3px 0;">Jenis</td>
+          <td style="font-weight:600;">${data.jenis || '-'}</td></tr>
+      <tr><td style="color:var(--text3); padding:3px 0;">Mata Uang</td>
+          <td style="font-weight:600;">${data.currency || 'IDR'}</td></tr>
+    </table>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary btn-sm" style="flex:1; justify-content:center;"
+              onclick="confirmCompanySetup(${JSON.stringify(data).replace(/"/g,'&quot;')}, this)">
+        ✓ Simpan Setup
+      </button>
+    </div>`;
+  box.appendChild(div);
+  scrollToBottom();
+}
+
+async function confirmCompanySetup(data, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+  try {
+    const r = await fetch('/ai/setup_company', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    const res = await r.json();
+    if (res.success) {
+      btn.closest('.ai-bubble').innerHTML = `
+        <div class="bubble-label" style="color:var(--sky-blue);">🏢 SETUP PERUSAHAAN</div>
+        <div style="color:#2a9e65; font-weight:600;">✓ Perusahaan <strong>${data.nama}</strong> berhasil disimpan!</div>
+        <div style="font-size:11px; color:var(--text3); margin-top:6px;">
+          Kamu bisa mulai input transaksi sekarang.
+        </div>`;
+      // Update company tag di header
+      const tag = document.querySelector('.company-tag strong');
+      if (tag) tag.textContent = data.nama;
+      showToast(`✓ Setup perusahaan ${data.nama} berhasil!`);
+    } else {
+      btn.disabled = false;
+      btn.textContent = '✓ Simpan Setup';
+      alert('Gagal: ' + res.error);
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✓ Simpan Setup';
+    alert('Error: ' + e.message);
+  }
 }
 
 // ── Keyboard shortcut ────────────────────────────────────────────

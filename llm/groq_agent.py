@@ -62,6 +62,18 @@ FORMAT RESPONS — jika ada transaksi, WAJIB sertakan JSON:
 }}
 ```
 
+Jika user ingin setup/daftarkan perusahaan, gunakan format ini:
+```json
+{{
+  "type": "company_setup",
+  "nama": "Nama Perusahaan",
+  "pemilik": "Nama Pemilik",
+  "periode": "April 2008",
+  "jenis": "Jenis Usaha",
+  "currency": "IDR"
+}}
+```
+
 Beberapa transaksi → array JSON. Penyesuaian → "type": "jurnal_penyesuaian".
 Gunakan nama akun PERSIS dari daftar di atas."""
 
@@ -147,8 +159,11 @@ def parse_journal_from_response(response_text: str) -> list | None:
 
     valid = [
         e for e in entries
-        if e.get("type") in ("jurnal_entry", "jurnal_penyesuaian")
-        and e.get("debit_entries") and e.get("kredit_entries")
+        if e.get("type") in ("jurnal_entry", "jurnal_penyesuaian", "company_setup")
+        and (
+            e.get("type") == "company_setup"
+            or (e.get("debit_entries") and e.get("kredit_entries"))
+        )
     ]
     return valid if valid else None
 
