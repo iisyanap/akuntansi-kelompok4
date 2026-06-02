@@ -5,13 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}AccSys — Akuntansi{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+/* ── Sidebar push toggle ──────────────────────────────────── */
+.sidebar {
+  transition: transform 0.24s cubic-bezier(.4,0,.2,1);
+}
+.sidebar.collapsed {
+  transform: translateX(-100%);
+  width: 0;
+  overflow: hidden;
+}
+.main {
+  transition: margin-left 0.24s cubic-bezier(.4,0,.2,1);
+}
+.main.expanded { margin-left: 0 !important; }
+
+/* Tombol toggle — tab di tepi kiri, selalu di tengah vertikal */
+#sb-toggle {
+  position: fixed;
+  top: 50%;
+  left: 248px;                         /* tepat di tepi kanan sidebar */
+  transform: translateY(-50%);
+  z-index: 400;
+  width: 18px; height: 56px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-bdr);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #7A8EB0; font-size: 11px;
+  box-shadow: 2px 0 8px rgba(0,0,0,.2);
+  transition: left 0.24s cubic-bezier(.4,0,.2,1), color .15s, background .15s;
+  user-select: none;
+}
+#sb-toggle:hover { color: var(--sky-blue); background: #242738; }
+#sb-toggle.closed { left: 0; }
+#sb-toggle .sb-arrow { display: block; transition: transform 0.24s; }
+#sb-toggle.closed .sb-arrow { transform: rotate(180deg); }
+</style>
 {% block extra_head %}{% endblock %}
 </head>
 <body>
+
+<!-- Tombol toggle sidebar — tab di tepi kiri, selalu tengah vertikal -->
+<button id="sb-toggle" onclick="sbToggle()" title="Toggle sidebar">
+  <span class="sb-arrow">‹</span>
+</button>
+
 <div class="layout">
 
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">
         <div class="logo-icon">K4</div>
@@ -20,35 +65,44 @@
       <div class="logo-sub">Sistem Akuntansi</div>
     </div>
 
+    <!-- Sidebar logo only, no close button inside -->
     <nav class="nav">
       <div class="nav-group">
         <div class="nav-label">Setup</div>
-        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+        <a href="{{ url_for('index') }}"
+           class="{% if request.endpoint=='index' %}active{% endif %}">
           <span class="nav-step">0</span> Setup Perusahaan
         </a>
       </div>
 
       <div class="nav-group">
         <div class="nav-label">Siklus Akuntansi</div>
-        <a href="{{ url_for('jurnal') }}" class="{% if request.endpoint == 'jurnal' %}active{% endif %}">
+        <a href="{{ url_for('jurnal') }}"
+           class="{% if request.endpoint=='jurnal' %}active{% endif %}">
           <span class="nav-step">1</span> Jurnal Umum
         </a>
-        <a href="{{ url_for('buku_besar') }}" class="{% if request.endpoint == 'buku_besar' %}active{% endif %}">
+        <a href="{{ url_for('buku_besar') }}"
+           class="{% if request.endpoint=='buku_besar' %}active{% endif %}">
           <span class="nav-step">2</span> Buku Besar
         </a>
-        <a href="{{ url_for('neraca_saldo') }}" class="{% if request.endpoint == 'neraca_saldo' %}active{% endif %}">
+        <a href="{{ url_for('neraca_saldo') }}"
+           class="{% if request.endpoint=='neraca_saldo' %}active{% endif %}">
           <span class="nav-step">3</span> Neraca Saldo
         </a>
-        <a href="{{ url_for('penyesuaian') }}" class="{% if request.endpoint == 'penyesuaian' %}active{% endif %}">
+        <a href="{{ url_for('penyesuaian') }}"
+           class="{% if request.endpoint=='penyesuaian' %}active{% endif %}">
           <span class="nav-step">4</span> Jurnal Penyesuaian
         </a>
-        <a href="{{ url_for('kertas_kerja') }}" class="{% if request.endpoint == 'kertas_kerja' %}active{% endif %}">
+        <a href="{{ url_for('kertas_kerja') }}"
+           class="{% if request.endpoint=='kertas_kerja' %}active{% endif %}">
           <span class="nav-step">5</span> Kertas Kerja
         </a>
-        <a href="{{ url_for('laporan') }}" class="{% if request.endpoint == 'laporan' %}active{% endif %}">
+        <a href="{{ url_for('laporan') }}"
+           class="{% if request.endpoint=='laporan' %}active{% endif %}">
           <span class="nav-step">6</span> Laporan Keuangan
         </a>
-        <a href="{{ url_for('jurnal_penutup') }}" class="{% if request.endpoint == 'jurnal_penutup' %}active{% endif %}">
+        <a href="{{ url_for('jurnal_penutup') }}"
+           class="{% if request.endpoint=='jurnal_penutup' %}active{% endif %}">
           <span class="nav-step">7</span> Jurnal Penutup
         </a>
       </div>
@@ -56,7 +110,7 @@
       <div class="nav-group">
         <div class="nav-label">AI Assistant</div>
         <a href="{{ url_for('ai_assistant') }}"
-           class="{% if request.endpoint == 'ai_assistant' %}active-ai{% endif %}">
+           class="{% if request.endpoint=='ai_assistant' %}active-ai{% endif %}">
           <span class="nav-icon">✦</span> AI Asisten
           <span class="nav-ai-badge">GROQ</span>
         </a>
@@ -69,17 +123,74 @@
         Mata Uang: <strong>{{ currency }} ({{ currency_symbol }})</strong>
       </div>
       {% endif %}
-      <form method="POST" action="{{ url_for('reset') }}" onsubmit="return confirm('Reset semua data?')">
+      <form method="POST" action="{{ url_for('reset') }}"
+            onsubmit="if(!confirm('Reset semua data?')) return false; localStorage.removeItem('accsys_antrian'); localStorage.removeItem('accsys_sb'); return true;">
         <button type="submit" class="btn-reset">⟳ Reset / Mulai Ulang</button>
       </form>
     </div>
   </aside>
 
   <!-- MAIN -->
-  <main class="main">
+  <main class="main" id="main-content">
     {% block content %}{% endblock %}
   </main>
 </div>
+
+<script>
+// ── Sidebar toggle ─────────────────────────────────────────────
+const SB_KEY = 'accsys_sb';
+const sbEl   = document.getElementById('sidebar');
+const mainEl = document.getElementById('main-content');
+const btnEl  = document.getElementById('sb-toggle');
+
+function sbToggle() {
+  const isOpen = !sbEl.classList.contains('collapsed');
+  if (isOpen) {
+    sbEl.classList.add('collapsed');
+    mainEl.classList.add('expanded');
+    btnEl.classList.add('closed');
+    localStorage.setItem(SB_KEY, 'closed');
+  } else {
+    sbEl.classList.remove('collapsed');
+    mainEl.classList.remove('expanded');
+    btnEl.classList.remove('closed');
+    localStorage.setItem(SB_KEY, 'open');
+  }
+}
+
+// Restore state tanpa animasi flash
+(function(){
+  if (localStorage.getItem(SB_KEY) === 'closed') {
+    sbEl.style.transition  = 'none';
+    mainEl.style.transition = 'none';
+    btnEl.style.transition  = 'none';
+    sbEl.classList.add('collapsed');
+    mainEl.classList.add('expanded');
+    btnEl.classList.add('closed');
+    requestAnimationFrame(() => {
+      sbEl.style.transition   = '';
+      mainEl.style.transition = '';
+      btnEl.style.transition  = '';
+    });
+  }
+})();
+
+// ── localStorage helpers (dipakai oleh ai_assistant.html) ──────
+const AQ_KEY = 'accsys_antrian';
+window.aqLoad = function() {
+  try { return JSON.parse(localStorage.getItem(AQ_KEY) || '[]'); } catch { return []; }
+};
+window.aqSave = function(list) {
+  localStorage.setItem(AQ_KEY, JSON.stringify(list));
+};
+window.globalAddEntry = function(entry) {
+  const list = window.aqLoad();
+  list.push(entry);
+  window.aqSave(list);
+  if (typeof window.syncAiRightPanel === 'function') window.syncAiRightPanel();
+};
+</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

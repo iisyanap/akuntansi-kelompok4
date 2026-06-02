@@ -28,7 +28,7 @@ Mata Uang       : {perusahaan.get('currency', 'IDR')}"""
         ctx += f"\nAkun sudah dipakai: {', '.join(existing_accounts[:20])}"
 
     return f"""Kamu adalah asisten akuntansi profesional untuk sistem AccSys.
-Bantu pengguna membuat jurnal akuntansi dari deskripsi transaksi Bahasa Indonesia.
+Bantu pengguna membuat jurnal akuntansi dari deskripsi transaksi Bahasa Indonesia dan Bahasa Inggris.
 
 KONTEKS PERUSAHAAN:{ctx if ctx else ' Belum ada data.'}
 
@@ -126,7 +126,7 @@ def chat_with_memory(
         model=model,
         messages=groq_messages,
         max_tokens=2048,
-        temperature=1.2
+        temperature=0.1
     )
 
     response_text = response.choices[0].message.content

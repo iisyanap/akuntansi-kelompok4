@@ -4,340 +4,320 @@
 {% block extra_head %}
 <style>
   .main { padding: 24px 28px; }
-  .ai-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; height: calc(100vh - 100px); }
-  .ai-right { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+  .ai-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    height: calc(100vh - 160px);
+    min-height: 400px;
+  }
+  /* Kedua kolom sama tinggi, tidak boleh overflow */
+  .ai-panel, .ai-right { height: 100%; overflow: hidden; }
 
-  /* API Key Setup */
-  .apikey-card {
-    background: linear-gradient(135deg, rgba(250,133,90,0.08), rgba(201,54,56,0.06));
-    border: 1.5px solid rgba(250,133,90,0.25);
-    border-radius: var(--radius); padding: 18px;
-  }
-  .apikey-card .ak-title {
-    font-size: 12px; font-weight: 700; color: var(--coral-glow);
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px;
-  }
-  .apikey-input-row { display: flex; gap: 8px; }
-  .apikey-input-row input { flex: 1; font-family: var(--mono); font-size: 12px; }
-  .apikey-status {
-    font-size: 11px; margin-top: 6px; padding: 5px 10px;
-    border-radius: 5px; display: none;
-  }
-  .apikey-status.ok { background: rgba(61,189,125,0.12); color: #2a9e65; display: block; }
-  .apikey-status.err { background: rgba(201,54,56,0.10); color: var(--tomato-jam); display: block; }
-
-  /* Memory display */
-  .memory-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden;
-  }
-  .memory-header {
-    padding: 10px 14px;
-    background: rgba(98,196,218,0.08);
-    border-bottom: 1px solid var(--border);
-    font-size: 11px; font-weight: 700; color: #3a9db5;
-    letter-spacing: 1px; text-transform: uppercase;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .memory-count {
-    background: var(--sky-blue); color: white;
-    font-size: 10px; padding: 1px 7px; border-radius: 10px;
-  }
-  .memory-list { padding: 10px 14px; max-height: 180px; overflow-y: auto; }
-  .memory-item {
-    font-size: 11.5px; color: var(--text2); padding: 5px 0;
-    border-bottom: 1px solid var(--border); line-height: 1.4;
-  }
-  .memory-item:last-child { border-bottom: none; }
-  .memory-item .mi-role {
-    font-size: 9px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .mi-user { color: var(--sky-blue); }
-  .mi-ai   { color: var(--coral-glow); }
-
-  /* Pending entries */
+  /* Right panel antrian */
+  .ai-right { display: flex; flex-direction: column; }
   .pending-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden; flex: 1;
+    border-radius: var(--radius); overflow: hidden;
+    display: flex; flex-direction: column;
+    height: 100%;            /* ← ikuti tinggi grid row */
+    min-height: 0;           /* ← penting agar flex child bisa shrink */
   }
   .pending-header {
-    padding: 10px 14px;
-    background: rgba(255,222,150,0.25);
-    border-bottom: 1px solid var(--border2);
-    font-size: 11px; font-weight: 700; color: #8A6A00;
-    letter-spacing: 1px; text-transform: uppercase;
+    padding: 12px 14px; flex-shrink: 0;
+    background: rgba(255,222,150,.25); border-bottom: 1px solid var(--border2);
+    font-size: 11px; font-weight: 700; color: #8A6A00; letter-spacing: .5px;
     display: flex; align-items: center; justify-content: space-between;
   }
   .pending-count {
     background: var(--soft-peach); color: #6A4A00;
-    font-size: 10px; padding: 1px 7px; border-radius: 10px;
+    font-size: 10px; padding: 1px 8px; border-radius: 10px;
   }
-  .pending-list { padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .pending-list {
+    overflow-y: auto; flex: 1; min-height: 0; /* ← wajib */
+    padding: 10px; display: flex; flex-direction: column; gap: 8px;
+  }
   .pending-item {
-    background: var(--bg);
-    border: 1.5px solid var(--border2);
-    border-radius: var(--radius-sm); padding: 10px 12px;
+    background: var(--bg); border: 1.5px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 10px 12px; flex-shrink: 0;
   }
-  .pending-item .pi-date {
-    font-size: 10px; font-weight: 700; color: var(--text3);
-    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;
+  .pi-date { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; margin-bottom:4px; }
+  .pi-ket  { font-size:12px; color:var(--text); font-weight:600; margin-bottom:5px; }
+  .pi-row  { display:flex; justify-content:space-between; font-size:11px; padding:2px 0; }
+  .pi-row.k{ padding-left:14px; color:var(--text2); }
+  .pi-acc  { flex:1; }
+  .pi-amt  { font-family:var(--mono); font-weight:600; }
+  .pi-amt.d{ color:var(--tomato-jam); }
+  .pi-amt.k{ color:var(--success); }
+  .pi-acts { display:flex; gap:6px; margin-top:8px; }
+  .pending-footer {
+    padding: 10px; border-top: 1px solid var(--border); flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 6px;
   }
-  .pending-item .pi-ket {
-    font-size: 12px; color: var(--text); font-weight: 600; margin-bottom: 6px;
-  }
-  .pending-entry-row {
-    display: flex; justify-content: space-between;
-    font-size: 11px; padding: 3px 0;
-  }
-  .pending-entry-row.is-kredit { padding-left: 16px; color: var(--text2); }
-  .pending-entry-row .pe-acc { flex: 1; }
-  .pending-entry-row .pe-amt { font-family: var(--mono); font-weight: 600; }
-  .pe-amt.d { color: var(--tomato-jam); }
-  .pe-amt.k { color: var(--success); }
-  .pi-actions { display: flex; gap: 6px; margin-top: 8px; }
-
-  /* Model selector */
-  .model-selector { display: flex; gap: 6px; flex-wrap: wrap; }
-  .model-chip {
-    padding: 4px 10px; border-radius: 12px;
-    font-size: 11px; font-weight: 600; cursor: pointer;
-    border: 1.5px solid var(--border2); color: var(--text2);
-    background: var(--surface); transition: all 0.13s;
-  }
-  .model-chip.selected {
-    border-color: var(--sky-blue); color: var(--sky-blue);
-    background: rgba(98,196,218,0.10);
-  }
-  .model-chip:hover { border-color: var(--sky-blue); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom:16px;" data-key-from-env="{{ 'true' if key_from_env else 'false' }}" id="ai-page-header">
+<div class="page-header" style="margin-bottom:16px;"
+     data-key-from-env="{{ 'true' if key_from_env else 'false' }}"
+     id="ai-page-header">
   <div class="company-tag">
     <strong>{{ perusahaan.nama or 'Belum Setup' }}</strong>
     {% if perusahaan.periode %} · {{ perusahaan.periode }}{% endif %}
   </div>
   <h1>✦ AI Asisten Akuntansi</h1>
-  <p>Ketik transaksi dalam bahasa natural — AI akan parse menjadi jurnal otomatis. Didukung Groq + LangChain Memory.</p>
+  <p>Ketik transaksi dalam bahasa natural — AI akan parse menjadi jurnal otomatis.</p>
 </div>
 
-<!-- API Key setup (awal) -->
 {% if not session_has_apikey %}
 <div class="alert alert-warn" style="margin-bottom:16px;">
-  ⚠️ Masukkan Groq API Key untuk menggunakan fitur AI. Key hanya disimpan di session browser kamu.
+  ⚠️ Tambahkan <code>GROQ_API_KEY</code> di file <code>.env</code> untuk mengaktifkan AI.
   Dapatkan gratis di <a href="https://console.groq.com" target="_blank" style="color:inherit;font-weight:700;">console.groq.com</a>
 </div>
 {% endif %}
 
+<input type="hidden" id="api-key-input" value="{{ saved_api_key or '' }}">
+
 <div class="ai-layout">
-  <!-- LEFT: Chat panel -->
+
+  <!-- LEFT: Chat -->
   <div class="ai-panel">
     <div class="ai-header">
       <div class="ai-header-icon">✦</div>
       <div class="ai-header-text">
         <h2>AI Asisten AccSys</h2>
-        <p>Groq · LangChain Memory · Llama 3.3</p>
+        <p>Groq · Llama 3.1</p>
       </div>
-      <span class="ai-header-badge" id="model-badge">llama-3.3-70b</span>
+      <span class="ai-header-badge">llama-3.1-8b</span>
     </div>
 
-    <!-- Context bar (memory summary) -->
-    <div class="ai-context-bar" id="context-bar">
+    <div class="ai-context-bar">
       <span class="ctx-label">KONTEKS:</span>
-      {% if perusahaan.nama %}
-      <span class="ctx-chip">🏢 {{ perusahaan.nama }}</span>
-      {% endif %}
-      {% if perusahaan.periode %}
-      <span class="ctx-chip">📅 {{ perusahaan.periode }}</span>
-      {% endif %}
-      <span class="ctx-chip" id="mem-count-badge">
-        💬 {{ chat_history|length }} pesan tersimpan
-      </span>
+      {% if perusahaan.nama %}<span class="ctx-chip">🏢 {{ perusahaan.nama }}</span>{% endif %}
+      {% if perusahaan.periode %}<span class="ctx-chip">📅 {{ perusahaan.periode }}</span>{% endif %}
+      <span class="ctx-chip" id="mem-count-badge">💬 {{ chat_history|length }} pesan</span>
       {% if chat_history %}
-      <button onclick="clearMemory()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--text3);cursor:pointer;">
-        🗑 Clear Memory
+      <button onclick="clearMemory()"
+              style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--text3);cursor:pointer;">
+        🗑 Clear
       </button>
       {% endif %}
     </div>
 
-    <!-- Chat messages -->
     <div class="ai-chat" id="chat-box">
       {% if not chat_history %}
-      <!-- Welcome message -->
       <div class="ai-bubble assistant">
         <div class="bubble-label">✦ AccSys AI</div>
         Halo! Saya asisten akuntansi AccSys. 👋<br><br>
-        Saya bisa membantu kamu:<br>
-        • <strong>Setup perusahaan</strong> — cukup ceritakan nama, pemilik, periode<br>
-        • <strong>Buat jurnal umum</strong> dari deskripsi transaksi<br>
-        • <strong>Buat jurnal penyesuaian</strong> di akhir periode<br><br>
-        Contoh setup: <em style="color:var(--text2);">"Setup perusahaan: Tuan Amir Makmur, pemilik Tuan Amir, periode April 2008, usaha service mesin cuci, IDR"</em><br><br>
-        Mulai ketik di bawah! 🚀
+        Saya bisa membantu:<br>
+        • <strong>Setup perusahaan</strong> — ceritakan nama, pemilik, periode<br>
+        • <strong>Jurnal umum</strong> dari deskripsi transaksi<br>
+        • <strong>Jurnal penyesuaian</strong> di akhir periode<br><br>
+        Mulai ketik di bawah 🚀
       </div>
       {% else %}
-      {% for msg in chat_history %}
-        {% if msg.role == 'human' %}
-        <div class="ai-bubble user">{{ msg.content }}</div>
-        {% else %}
-        <div class="ai-bubble assistant">
-          <div class="bubble-label">✦ AccSys AI</div>
-          <div class="msg-content">{{ msg.content_html | safe }}</div>
-        </div>
-        {% endif %}
-      {% endfor %}
+        {% for msg in chat_history %}
+          {% if msg.role == 'human' %}
+          <div class="ai-bubble user">{{ msg.content }}</div>
+          {% else %}
+          <div class="ai-bubble assistant">
+            <div class="bubble-label">✦ AccSys AI</div>
+            <div>{{ msg.content_html | safe }}</div>
+          </div>
+          {% endif %}
+        {% endfor %}
       {% endif %}
     </div>
 
-    <!-- Input footer -->
     <div class="ai-footer">
-      <!-- Hint chips -->
-      <div class="ai-hints" id="hint-chips">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Pilih opsi atau ketik langsung:</div>
+      <div class="ai-hints">
         <span class="ai-hint-chip" onclick="setHint(this)">🏢 Setup perusahaan baru</span>
         <span class="ai-hint-chip" onclick="setHint(this)">💰 Investasi modal awal</span>
         <span class="ai-hint-chip" onclick="setHint(this)">🛒 Pembelian perlengkapan tunai</span>
         <span class="ai-hint-chip" onclick="setHint(this)">📋 Penerimaan pendapatan jasa</span>
+        <span class="ai-hint-chip" onclick="setHint(this)">💸 Pembayaran beban gaji</span>
         <span class="ai-hint-chip" onclick="setHint(this)">⚙️ Bantu jurnal penyesuaian</span>
       </div>
       <div class="ai-input-row">
-        <textarea id="user-input"
-                  placeholder="Deskripsikan transaksi... (Enter kirim, Shift+Enter baris baru)"
-                  rows="2"></textarea>
-        <button class="ai-send-btn" id="send-btn" onclick="sendMessage()" title="Kirim">
-          ➤
-        </button>
+        <textarea id="user-input" placeholder="Deskripsikan transaksi... (Enter kirim, Shift+Enter baris baru)" rows="2"></textarea>
+        <button class="ai-send-btn" id="send-btn" onclick="sendMessage()">➤</button>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT: Antrian Jurnal only -->
+  <!-- RIGHT: Antrian Jurnal (persists via localStorage) -->
   <div class="ai-right">
-
-    <!-- hidden input supaya JS tidak error -->
-    <input type="hidden" id="api-key-input" value="{{ saved_api_key or '' }}">
-
-    <!-- Antrian Jurnal -->
-    <div class="pending-card" style="flex:1;">
+    <div class="pending-card">
       <div class="pending-header">
         📝 Antrian Jurnal
-        <span class="pending-count" id="pending-count">0</span>
+        <span class="pending-count" id="rp-count">0</span>
       </div>
-      <div class="pending-list" id="pending-list">
-        <div style="font-size:12px; color:var(--text3); text-align:center; padding:28px 16px;" id="pending-empty">
+      <div class="pending-list" id="rp-list">
+        <div id="rp-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:28px 16px;">
           Belum ada jurnal dari AI.<br>
-          <span style="font-size:11px; opacity:0.7;">Ceritakan transaksi di chat →</span>
+          <span style="font-size:11px;opacity:.7;">Ceritakan transaksi di chat ←</span>
         </div>
       </div>
-      <div style="padding:10px; border-top:1px solid var(--border);">
-        <button class="btn btn-primary btn-sm" onclick="submitAllPending()"
-                id="submit-all-btn" style="width:100%; justify-content:center; display:none;">
+      <div class="pending-footer">
+        <button class="btn btn-success btn-sm" id="rp-save-all" onclick="rpSaveAll()"
+                style="width:100%;justify-content:center;display:none;">
           ✓ Simpan Semua ke Jurnal
+        </button>
+        <button class="btn btn-danger btn-sm" id="rp-clear" onclick="rpClearAll()"
+                style="width:100%;justify-content:center;display:none;">
+          🗑 Hapus Semua
         </button>
       </div>
     </div>
-
   </div>
-</div>
 
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-let pendingEntries = [];
 let selectedModel = 'llama-3.1-8b-instant';
 let isSending = false;
+const csQueue = {};
 
-// ── API Key ──────────────────────────────────────────────────────
-function saveApiKey() {
-  const key = document.getElementById('api-key-input').value.trim();
-  if (!key) return;
-  fetch('/ai/set_key', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({api_key: key})
-  }).then(r => r.json()).then(d => {
-    const el = document.getElementById('apikey-status');
-    if (d.success) {
-      el.className = 'apikey-status ok';
-      el.textContent = '✓ API Key tersimpan di session';
-    } else {
-      el.className = 'apikey-status err';
-      el.textContent = '✗ ' + (d.error || 'Gagal simpan');
-    }
+// ── Right Panel Antrian (reads from localStorage via base.html) ──
+function rpRender() {
+  const full  = window.aqLoad();
+  const clean = full.filter(e => e !== null);
+  const count = clean.length;
+
+  document.getElementById('rp-count').textContent = count;
+  document.getElementById('rp-save-all').style.display = count ? 'flex' : 'none';
+  document.getElementById('rp-clear').style.display   = count ? 'flex' : 'none';
+
+  const list = document.getElementById('rp-list');
+  list.innerHTML = '';
+
+  if (!count) {
+    list.innerHTML = `<div id="rp-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:28px 16px;">
+      Belum ada jurnal dari AI.<br><span style="font-size:11px;opacity:.7;">Ceritakan transaksi di chat ←</span></div>`;
+    return;
+  }
+
+  full.forEach((entry, idx) => {
+    if (!entry) return;
+    const isAdj = entry.type === 'jurnal_penyesuaian';
+    const adjB  = isAdj ? `<span class="badge badge-sky" style="font-size:9px;margin-left:4px;">AJP</span>` : '';
+    const dRows = (entry.debit_entries||[]).map(e =>
+      `<div class="pi-row"><span class="pi-acc">${e.akun}</span>
+       <span class="pi-amt d">Rp ${Number(e.jumlah).toLocaleString('id')}</span></div>`).join('');
+    const kRows = (entry.kredit_entries||[]).map(e =>
+      `<div class="pi-row k"><span class="pi-acc">${e.akun}</span>
+       <span class="pi-amt k">Rp ${Number(e.jumlah).toLocaleString('id')}</span></div>`).join('');
+    const div = document.createElement('div');
+    div.className = 'pending-item';
+    div.innerHTML = `
+      <div class="pi-date">${entry.tanggal||'-'}${adjB}</div>
+      <div class="pi-ket">${entry.keterangan||''}</div>
+      ${dRows}${kRows}
+      <div class="pi-acts">
+        <button class="btn btn-success btn-sm" onclick="rpSaveSingle(${idx})"
+                style="flex:1;justify-content:center;">✓ Simpan</button>
+        <button class="btn btn-danger btn-sm" onclick="rpRemove(${idx})">✕</button>
+      </div>`;
+    list.appendChild(div);
   });
 }
 
-function selectModel(el, model) {
-  selectedModel = model;
-  document.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('model-badge').textContent = el.textContent;
+async function rpSaveSingle(idx) {
+  const list = window.aqLoad(); const entry = list[idx]; if (!entry) return;
+  const ok = await _rpPost(entry);
+  if (ok) {
+    list[idx] = null; window.aqSave(list.filter(e=>e!==null));
+    rpRender(); window.apRender();
+    _rpToast(`✓ ${entry.keterangan||'Entri'} disimpan`);
+  }
 }
+async function rpSaveAll() {
+  const list = window.aqLoad(); let ok = 0;
+  for (const e of list) { if (e && await _rpPost(e)) ok++; }
+  window.aqSave([]); rpRender(); window.apRender();
+  _rpToast(`✓ ${ok} entri disimpan!`);
+}
+function rpRemove(idx) {
+  const list = window.aqLoad(); list[idx] = null;
+  window.aqSave(list.filter(e=>e!==null)); rpRender(); window.apRender();
+}
+function rpClearAll() {
+  if (!confirm('Hapus semua antrian?')) return;
+  window.aqSave([]); rpRender(); window.apRender();
+}
+
+async function _rpPost(entry) {
+  try {
+    const fd = new FormData();
+    fd.append('tanggal', entry.tanggal||'');
+    fd.append('keterangan', entry.keterangan||'');
+    (entry.debit_entries||[]).forEach(e=>{fd.append('debit_account[]',e.akun);fd.append('debit_amount[]',e.jumlah);});
+    (entry.kredit_entries||[]).forEach(e=>{fd.append('kredit_account[]',e.akun);fd.append('kredit_amount[]',e.jumlah);});
+    const r = await fetch(entry.type==='jurnal_penyesuaian'?'/penyesuaian/add':'/jurnal/add',{method:'POST',body:fd});
+    const d = await r.json();
+    if (!d.success){alert('Gagal: '+(d.error||'Error'));return false;}
+    return true;
+  } catch(e){alert('Error: '+e.message);return false;}
+}
+
+function _rpToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText='position:fixed;bottom:24px;right:24px;background:var(--success);color:white;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:9999;';
+  t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
+}
+
+// Hook: base.html calls this to sync after external changes
+window.syncAiRightPanel = rpRender;
+
+// ── Overide globalAddEntry: juga render right panel ─────────────
+const _baseGlobalAdd = window.globalAddEntry;
+window.globalAddEntry = function(entry) {
+  _baseGlobalAdd(entry);  // saves to localStorage + updates FAB
+  rpRender();              // update right panel
+};
 
 // ── Send Message ─────────────────────────────────────────────────
 async function sendMessage() {
   if (isSending) return;
-  const input = document.getElementById('user-input');
-  const msg = input.value.trim();
-  if (!msg) return;
-
-  // Key dari UI (kosong kalau sudah di .env — server yang pakai env key)
-  const apiKeyInput = document.getElementById('api-key-input');
-  const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-
-  // Baca dari data attribute (tidak bikin VS Code linter error)
+  const input  = document.getElementById('user-input');
+  const msg    = input.value.trim(); if (!msg) return;
+  const apiKey = document.getElementById('api-key-input')?.value.trim() || '';
   const keyFromEnv = document.getElementById('ai-page-header')?.dataset.keyFromEnv === 'true';
-  if (!keyFromEnv && !apiKey) {
-    alert('Masukkan Groq API Key terlebih dahulu, atau tambahkan GROQ_API_KEY di file .env');
-    return;
-  }
+  if (!keyFromEnv && !apiKey) { alert('Tambahkan GROQ_API_KEY di .env terlebih dahulu.'); return; }
 
-  isSending = true;
-  input.value = '';
+  isSending = true; input.value = '';
   document.getElementById('send-btn').disabled = true;
-
-  // Append user bubble
   appendBubble('user', msg);
-
-  // Loading bubble
-  const loadingId = 'loading-' + Date.now();
-  appendLoadingBubble(loadingId);
+  const lid = 'load-' + Date.now();
+  appendLoadingBubble(lid);
 
   try {
     const resp = await fetch('/ai/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        message: msg,
-        api_key: apiKey,
-        model: selectedModel
-      })
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message:msg, api_key:apiKey, model:selectedModel })
     });
     const data = await resp.json();
-
-    // Remove loading
-    document.getElementById(loadingId)?.remove();
+    document.getElementById(lid)?.remove();
 
     if (data.error) {
       appendErrorBubble(data.error);
     } else {
       appendAssistantBubble(data.response_html);
-      updateMemoryPanel(data.chat_history);
-
-      if (data.entries && data.entries.length > 0) {
+      const badge = document.getElementById('mem-count-badge');
+      if (badge) badge.textContent = `💬 ${data.chat_history.length} pesan`;
+      if (data.entries?.length) {
         data.entries.forEach(e => {
-          if (e.type === 'company_setup') {
-            addCompanySetupEntry(e);
-          } else {
-            addPendingEntry(e);
-          }
+          if (e.type === 'company_setup') showCompanySetupCard(e);
+          else window.globalAddEntry(e);
         });
       }
     }
   } catch (err) {
-    document.getElementById(loadingId)?.remove();
-    appendErrorBubble('Gagal terhubung ke server: ' + err.message);
+    document.getElementById(lid)?.remove();
+    appendErrorBubble('Gagal terhubung: ' + err.message);
   }
 
   isSending = false;
@@ -345,288 +325,92 @@ async function sendMessage() {
   scrollToBottom();
 }
 
-// ── Bubble Helpers ───────────────────────────────────────────────
+// ── Bubble helpers ────────────────────────────────────────────────
 function appendBubble(role, text) {
-  const box = document.getElementById('chat-box');
-  const div = document.createElement('div');
-  div.className = `ai-bubble ${role}`;
-  div.textContent = text;
-  box.appendChild(div);
-  scrollToBottom();
+  const d = document.createElement('div'); d.className=`ai-bubble ${role}`; d.textContent=text;
+  document.getElementById('chat-box').appendChild(d); scrollToBottom();
 }
-
-function appendAssistantBubble(htmlContent) {
-  const box = document.getElementById('chat-box');
-  const div = document.createElement('div');
-  div.className = 'ai-bubble assistant';
-  div.innerHTML = `<div class="bubble-label">✦ AccSys AI</div><div>${htmlContent}</div>`;
-  box.appendChild(div);
-  scrollToBottom();
+function appendAssistantBubble(html) {
+  const d = document.createElement('div'); d.className='ai-bubble assistant';
+  d.innerHTML=`<div class="bubble-label">✦ AccSys AI</div><div>${html}</div>`;
+  document.getElementById('chat-box').appendChild(d); scrollToBottom();
 }
-
 function appendLoadingBubble(id) {
-  const box = document.getElementById('chat-box');
-  const div = document.createElement('div');
-  div.id = id;
-  div.className = 'ai-bubble loading';
-  div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div> Sedang berpikir...';
-  box.appendChild(div);
-  scrollToBottom();
+  const d = document.createElement('div'); d.id=id; d.className='ai-bubble loading';
+  d.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div> Sedang berpikir...';
+  document.getElementById('chat-box').appendChild(d); scrollToBottom();
 }
-
 function appendErrorBubble(msg) {
-  const box = document.getElementById('chat-box');
-  const div = document.createElement('div');
-  div.className = 'ai-bubble error-bubble';
-  div.innerHTML = `⚠️ ${msg}`;
-  box.appendChild(div);
-  scrollToBottom();
+  const d = document.createElement('div'); d.className='ai-bubble error-bubble';
+  d.innerHTML=`⚠️ ${msg}`; document.getElementById('chat-box').appendChild(d); scrollToBottom();
+}
+function scrollToBottom() { const b=document.getElementById('chat-box'); b.scrollTop=b.scrollHeight; }
+
+// ── Company Setup card ────────────────────────────────────────────
+function showCompanySetupCard(data) {
+  const id = 'cs-' + Date.now(); csQueue[id] = data;
+  const d = document.createElement('div');
+  d.className='ai-bubble assistant'; d.id=id+'-bubble';
+  d.innerHTML=`
+    <div class="bubble-label" style="color:var(--sky-blue);">🏢 SETUP PERUSAHAAN</div>
+    <div style="font-size:12.5px;margin-bottom:10px;color:var(--text2);">Konfirmasi data berikut:</div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:12px;">
+      <tr><td style="color:var(--text3);padding:3px 0;width:80px;">Nama</td><td style="font-weight:600;">${data.nama||'-'}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 0;">Pemilik</td><td style="font-weight:600;">${data.pemilik||'-'}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 0;">Periode</td><td style="font-weight:600;">${data.periode||'-'}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 0;">Jenis</td><td style="font-weight:600;">${data.jenis||'-'}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 0;">Mata Uang</td><td style="font-weight:600;">${data.currency||'IDR'}</td></tr>
+    </table>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center;"
+              onclick="confirmSetup('${id}',this)">✓ Simpan Setup</button>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.ai-bubble').style.opacity='.5';this.disabled=true;">✕</button>
+    </div>`;
+  document.getElementById('chat-box').appendChild(d); scrollToBottom();
+}
+async function confirmSetup(id, btn) {
+  const data = csQueue[id]; if (!data) return;
+  btn.disabled=true; btn.textContent='Menyimpan...';
+  try {
+    const r = await fetch('/ai/setup_company',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const res = await r.json();
+    if (res.success) {
+      document.getElementById(id+'-bubble').innerHTML=`
+        <div class="bubble-label" style="color:var(--sky-blue);">🏢 SETUP PERUSAHAAN</div>
+        <div style="color:#2a9e65;font-weight:600;">✓ <strong>${data.nama}</strong> berhasil disimpan!</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">Periode: ${data.periode} · Pemilik: ${data.pemilik}</div>`;
+      const tag = document.querySelector('.company-tag strong');
+      if (tag) tag.textContent = data.nama;
+      delete csQueue[id];
+    } else { btn.disabled=false; btn.textContent='✓ Simpan Setup'; alert('Gagal: '+res.error); }
+  } catch(e) { btn.disabled=false; btn.textContent='✓ Simpan Setup'; alert('Error: '+e.message); }
 }
 
-function scrollToBottom() {
-  const box = document.getElementById('chat-box');
-  box.scrollTop = box.scrollHeight;
-}
-
-// ── Memory Panel (disederhanakan — elemen sudah dihapus dari UI) ──────
-function updateMemoryPanel(history) {
-  const count = history.length;
-  // Update context bar badge kalau masih ada
-  const badge = document.getElementById('mem-count-badge');
-  if (badge) badge.textContent = `💬 ${count} pesan tersimpan`;
+// ── Hint chips ────────────────────────────────────────────────────
+function setHint(el) {
+  const map = {
+    '🏢 Setup perusahaan baru':        'Setup perusahaan baru untuk saya: nama perusahaaan, nama pemilik, periode, jenis perusahaan, mata uang',
+    '💰 Investasi modal awal':         'Bantu buat jurnal investasi modal awal pemilik',
+    '🛒 Pembelian perlengkapan tunai': 'Catat pembelian perlengkapan secara tunai',
+    '📋 Penerimaan pendapatan jasa':   'Catat penerimaan kas dari pendapatan jasa',
+    '💸 Pembayaran beban gaji':        'Catat pembayaran beban gaji karyawan',
+    '⚙️ Bantu jurnal penyesuaian':     'Bantu saya membuat jurnal penyesuaian untuk periode ini'
+  };
+  document.getElementById('user-input').value = map[el.textContent] || el.textContent;
+  document.getElementById('user-input').focus();
 }
 
 async function clearMemory() {
   if (!confirm('Hapus semua memory percakapan?')) return;
-  await fetch('/ai/clear_memory', {method: 'POST'});
-  location.reload();
+  await fetch('/ai/clear_memory',{method:'POST'}); location.reload();
 }
 
-// ── Pending Entries ──────────────────────────────────────────────
-function addPendingEntry(entry) {
-  const idx = pendingEntries.length;
-  pendingEntries.push(entry);
-
-  document.getElementById('pending-empty').style.display = 'none';
-  document.getElementById('pending-count').textContent = pendingEntries.length;
-  document.getElementById('submit-all-btn').style.display = 'flex';
-
-  const list = document.getElementById('pending-list');
-  const div = document.createElement('div');
-  div.className = 'pending-item';
-  div.id = `pending-item-${idx}`;
-
-  const isAdj = entry.type === 'jurnal_penyesuaian';
-  const typeBadge = isAdj
-    ? `<span class="badge badge-sky" style="margin-left:6px;font-size:9px;">PENYESUAIAN</span>`
-    : '';
-
-  let debitRows = entry.debit_entries.map(e =>
-    `<div class="pending-entry-row">
-      <span class="pe-acc">${e.akun}</span>
-      <span class="pe-amt d">Rp ${Number(e.jumlah).toLocaleString('id')}</span>
-    </div>`
-  ).join('');
-
-  let kreditRows = entry.kredit_entries.map(e =>
-    `<div class="pending-entry-row is-kredit">
-      <span class="pe-acc" style="padding-left:14px;">  ${e.akun}</span>
-      <span class="pe-amt k">Rp ${Number(e.jumlah).toLocaleString('id')}</span>
-    </div>`
-  ).join('');
-
-  div.innerHTML = `
-    <div class="pi-date">${entry.tanggal || '-'}${typeBadge}</div>
-    <div class="pi-ket">${entry.keterangan || ''}</div>
-    ${debitRows}${kreditRows}
-    <div class="pi-actions">
-      <button class="btn btn-success btn-sm" onclick="submitSingle(${idx})" style="flex:1;justify-content:center;">
-        ✓ Simpan
-      </button>
-      <button class="btn btn-danger btn-sm" onclick="removePending(${idx})">✕</button>
-    </div>`;
-
-  list.appendChild(div);
-}
-
-async function submitSingle(idx) {
-  const entry = pendingEntries[idx];
-  if (!entry) return;
-  const result = await saveEntry(entry);
-  if (result.success) {
-    document.getElementById(`pending-item-${idx}`)?.remove();
-    pendingEntries[idx] = null;
-    updatePendingCount();
-    showToast(`✓ Tersimpan: ${entry.keterangan || 'entri jurnal'}`);
-  } else {
-    alert('Gagal: ' + result.error);
-  }
-}
-
-async function submitAllPending() {
-  const actives = pendingEntries.filter(e => e !== null);
-  if (!actives.length) return;
-  let success = 0;
-  for (let i = 0; i < pendingEntries.length; i++) {
-    if (!pendingEntries[i]) continue;
-    const r = await saveEntry(pendingEntries[i]);
-    if (r.success) { success++; pendingEntries[i] = null; }
-  }
-  document.getElementById('pending-list').innerHTML =
-    `<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0;" id="pending-empty">
-      Belum ada jurnal dari AI.
-    </div>`;
-  pendingEntries = [];
-  document.getElementById('pending-count').textContent = '0';
-  document.getElementById('submit-all-btn').style.display = 'none';
-  showToast(`✓ ${success} entri berhasil disimpan ke jurnal!`);
-}
-
-async function saveEntry(entry) {
-  const isAdj = entry.type === 'jurnal_penyesuaian';
-  const url = isAdj ? '/penyesuaian/add' : '/jurnal/add';
-  const fd = new FormData();
-  fd.append('tanggal', entry.tanggal || '');
-  fd.append('keterangan', entry.keterangan || '');
-  entry.debit_entries.forEach(e => {
-    fd.append('debit_account[]', e.akun);
-    fd.append('debit_amount[]', e.jumlah);
-  });
-  entry.kredit_entries.forEach(e => {
-    fd.append('kredit_account[]', e.akun);
-    fd.append('kredit_amount[]', e.jumlah);
-  });
-  const r = await fetch(url, {method:'POST', body: fd});
-  return await r.json();
-}
-
-function removePending(idx) {
-  pendingEntries[idx] = null;
-  document.getElementById(`pending-item-${idx}`)?.remove();
-  updatePendingCount();
-}
-
-function updatePendingCount() {
-  const count = pendingEntries.filter(e => e !== null).length;
-  document.getElementById('pending-count').textContent = count;
-  if (!count) {
-    document.getElementById('submit-all-btn').style.display = 'none';
-    if (!document.getElementById('pending-empty')) {
-      const el = document.createElement('div');
-      el.id = 'pending-empty';
-      el.style.cssText = 'font-size:12px;color:var(--text3);text-align:center;padding:20px 0;';
-      el.textContent = 'Belum ada jurnal dari AI.';
-      document.getElementById('pending-list').appendChild(el);
-    } else {
-      document.getElementById('pending-empty').style.display = 'block';
-    }
-  }
-}
-
-// ── Hint chips ───────────────────────────────────────────────────
-function setHint(el) {
-  const hints = {
-    '🏢 Setup perusahaan baru': 'Setup perusahaan baru untuk saya: nama perusahaaan, nama pemilik, periode, jenis perusahaan, mata uang',
-    '💰 Investasi modal awal': 'Bantu buat jurnal investasi modal awal pemilik',
-    '🛒 Pembelian perlengkapan tunai': 'Catat pembelian perlengkapan secara tunai',
-    '📋 Penerimaan pendapatan jasa': 'Catat penerimaan kas dari pendapatan jasa',
-    '⚙️ Bantu jurnal penyesuaian': 'Bantu saya membuat jurnal penyesuaian untuk periode ini'
-  };
-  document.getElementById('user-input').value = hints[el.textContent] || el.textContent;
-  document.getElementById('user-input').focus();
-}
-
-// ── Toast notification ───────────────────────────────────────────
-function showToast(msg) {
-  const t = document.createElement('div');
-  t.style.cssText = `
-    position:fixed; bottom:24px; right:24px;
-    background:var(--success); color:white;
-    padding:12px 20px; border-radius:8px;
-    font-size:13px; font-weight:600;
-    box-shadow:0 4px 20px rgba(0,0,0,0.15);
-    z-index:9999; animation: fadeSlideIn 0.25s ease;
-  `;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
-
-// ── Company Setup dari AI ────────────────────────────────────────
-function addCompanySetupEntry(data) {
-  const box = document.getElementById('chat-box');
-  const div = document.createElement('div');
-  div.className = 'ai-bubble assistant';
-  div.style.cssText = 'align-self:flex-start; max-width:90%; border:1.5px solid var(--border2);';
-  div.innerHTML = `
-    <div class="bubble-label" style="color:var(--sky-blue);">🏢 SETUP PERUSAHAAN</div>
-    <div style="font-size:13px; margin-bottom:10px;">
-      AI mendeteksi data perusahaan. Konfirmasi untuk menyimpan:
-    </div>
-    <table style="width:100%; font-size:12px; border-collapse:collapse; margin-bottom:10px;">
-      <tr><td style="color:var(--text3); padding:3px 0; width:90px;">Nama</td>
-          <td style="font-weight:600;">${data.nama || '-'}</td></tr>
-      <tr><td style="color:var(--text3); padding:3px 0;">Pemilik</td>
-          <td style="font-weight:600;">${data.pemilik || '-'}</td></tr>
-      <tr><td style="color:var(--text3); padding:3px 0;">Periode</td>
-          <td style="font-weight:600;">${data.periode || '-'}</td></tr>
-      <tr><td style="color:var(--text3); padding:3px 0;">Jenis</td>
-          <td style="font-weight:600;">${data.jenis || '-'}</td></tr>
-      <tr><td style="color:var(--text3); padding:3px 0;">Mata Uang</td>
-          <td style="font-weight:600;">${data.currency || 'IDR'}</td></tr>
-    </table>
-    <div style="display:flex; gap:8px;">
-      <button class="btn btn-primary btn-sm" style="flex:1; justify-content:center;"
-              onclick="confirmCompanySetup(${JSON.stringify(data).replace(/"/g,'&quot;')}, this)">
-        ✓ Simpan Setup
-      </button>
-    </div>`;
-  box.appendChild(div);
-  scrollToBottom();
-}
-
-async function confirmCompanySetup(data, btn) {
-  btn.disabled = true;
-  btn.textContent = 'Menyimpan...';
-  try {
-    const r = await fetch('/ai/setup_company', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(data)
-    });
-    const res = await r.json();
-    if (res.success) {
-      btn.closest('.ai-bubble').innerHTML = `
-        <div class="bubble-label" style="color:var(--sky-blue);">🏢 SETUP PERUSAHAAN</div>
-        <div style="color:#2a9e65; font-weight:600;">✓ Perusahaan <strong>${data.nama}</strong> berhasil disimpan!</div>
-        <div style="font-size:11px; color:var(--text3); margin-top:6px;">
-          Kamu bisa mulai input transaksi sekarang.
-        </div>`;
-      // Update company tag di header
-      const tag = document.querySelector('.company-tag strong');
-      if (tag) tag.textContent = data.nama;
-      showToast(`✓ Setup perusahaan ${data.nama} berhasil!`);
-    } else {
-      btn.disabled = false;
-      btn.textContent = '✓ Simpan Setup';
-      alert('Gagal: ' + res.error);
-    }
-  } catch(e) {
-    btn.disabled = false;
-    btn.textContent = '✓ Simpan Setup';
-    alert('Error: ' + e.message);
-  }
-}
-
-// ── Keyboard shortcut ────────────────────────────────────────────
 document.getElementById('user-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
-// Auto scroll on load
+// Init right panel dari localStorage
+rpRender();
 scrollToBottom();
 </script>
 {% endblock %}
