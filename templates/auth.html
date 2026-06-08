@@ -1,0 +1,341 @@
+{# auth.html — Login / Register page (standalone, no sidebar) #}
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccSys — Masuk / Daftar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* ── Auth-specific overrides ──────────────────────────────────── */
+    body {
+      background: #0f1117;
+    }
+
+    .auth-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: #1c1e2b;
+      border: 1px solid #2d3048;
+      border-radius: 16px;
+      padding: 40px 36px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+    }
+
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      justify-content: center;
+    }
+
+    .auth-logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #5B8DEF, #38D9A9);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 14px;
+      color: #0f1117;
+    }
+
+    .auth-logo-text {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.5px;
+    }
+
+    .auth-subtitle {
+      text-align: center;
+      color: #7A8EB0;
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+
+    /* Tabs */
+    .auth-tabs {
+      display: flex;
+      gap: 4px;
+      background: #151722;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 28px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 9px 0;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .18s;
+      background: transparent;
+      color: #7A8EB0;
+    }
+
+    .auth-tab.active {
+      background: #2d3048;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+    }
+
+    .auth-tab:not(.active):hover {
+      color: #a8b8d8;
+    }
+
+    /* Forms */
+    .auth-form {
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+
+    .auth-field {
+      margin-bottom: 16px;
+    }
+
+    .auth-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #a8b8d8;
+      margin-bottom: 6px;
+      letter-spacing: .3px;
+    }
+
+    .auth-field input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #151722;
+      border: 1px solid #2d3048;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .15s;
+      box-sizing: border-box;
+    }
+
+    .auth-field input:focus {
+      border-color: #5B8DEF;
+    }
+
+    .auth-field input::placeholder {
+      color: #4a5170;
+    }
+
+    .auth-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .18s;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #5B8DEF, #3a6fd8);
+      color: #fff;
+      letter-spacing: .3px;
+    }
+
+    .auth-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(91, 141, 239, .35);
+    }
+
+    .auth-btn:active {
+      transform: translateY(0);
+    }
+
+    .auth-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .auth-error {
+      background: rgba(239, 68, 68, .1);
+      border: 1px solid rgba(239, 68, 68, .3);
+      border-radius: 8px;
+      color: #f87171;
+      padding: 10px 14px;
+      font-size: 12px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .auth-error.show {
+      display: block;
+    }
+
+    .auth-success {
+      background: rgba(56, 217, 169, .1);
+      border: 1px solid rgba(56, 217, 169, .3);
+      border-radius: 8px;
+      color: #38D9A9;
+      padding: 10px 14px;
+      font-size: 12px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .auth-success.show {
+      display: block;
+    }
+
+    .auth-divider {
+      text-align: center;
+      color: #4a5170;
+      font-size: 11px;
+      margin: 20px 0 16px;
+      position: relative;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: calc(50% - 24px);
+      height: 1px;
+      background: #2d3048;
+    }
+
+    .auth-divider::before {
+      left: 0;
+    }
+
+    .auth-divider::after {
+      right: 0;
+    }
+
+    .auth-hint {
+      text-align: center;
+      font-size: 11px;
+      color: #4a5170;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+
+      <!-- Logo -->
+      <div class="auth-logo">
+        <div class="auth-logo-icon">K4</div>
+        <div class="auth-logo-text">AccSys</div>
+      </div>
+      <p class="auth-subtitle">Sistem Akuntansi — Masuk untuk melanjutkan</p>
+
+      <!-- Error / Success messages -->
+      <div class="auth-error" id="auth-error">{{ error or '' }}</div>
+      <div class="auth-success" id="auth-success">{{ success or '' }}</div>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Masuk</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Daftar</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form class="auth-form active" id="form-login" method="POST" action="{{ url_for('auth_login') }}">
+        <div class="auth-field">
+          <label>EMAIL</label>
+          <input type="email" name="email" placeholder="nama@email.com" value="{{ email or '' }}" required
+            autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>PASSWORD</label>
+          <input type="password" name="password" placeholder="Masukkan password" required
+            autocomplete="current-password">
+        </div>
+        <button type="submit" class="auth-btn" id="btn-login">Masuk →</button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form class="auth-form" id="form-register" method="POST" action="{{ url_for('auth_register') }}">
+        <div class="auth-field">
+          <label>EMAIL</label>
+          <input type="email" name="email" placeholder="nama@email.com" value="{{ email or '' }}" required
+            autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>PASSWORD</label>
+          <input type="password" name="password" placeholder="Min. 6 karakter" required minlength="6"
+            autocomplete="new-password">
+        </div>
+        <div class="auth-field">
+          <label>KONFIRMASI PASSWORD</label>
+          <input type="password" name="password_confirm" placeholder="Ulangi password" required minlength="6"
+            autocomplete="new-password">
+        </div>
+        <button type="submit" class="auth-btn" id="btn-register">Buat Akun →</button>
+      </form>
+
+      <div class="auth-divider">atau</div>
+      <p class="auth-hint">Data tersimpan aman di Supabase. Setiap akun memiliki data terpisah.</p>
+
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      const tabLogin = document.getElementById('tab-login');
+      const tabRegister = document.getElementById('tab-register');
+      const formLogin = document.getElementById('form-login');
+      const formRegister = document.getElementById('form-register');
+
+      if (tab === 'login') {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        formLogin.classList.add('active');
+        formRegister.classList.remove('active');
+      } else {
+        tabRegister.classList.add('active');
+        tabLogin.classList.remove('active');
+        formRegister.classList.add('active');
+        formLogin.classList.remove('active');
+      }
+      // Clear messages when switching tabs
+      document.getElementById('auth-error').classList.remove('show');
+      document.getElementById('auth-success').classList.remove('show');
+    }
+
+    // Show error if it was passed from server
+    (function () {
+      // Auto-switch to register tab BEFORE showing messages
+      {% if error and('daftar' in error | lower or 'register' in error | lower or 'pendaftaran' in error | lower) %}
+      switchTab('register');
+      {% endif %}
+      // Now show messages (after any tab switch that might clear them)
+      const errEl = document.getElementById('auth-error');
+      const succEl = document.getElementById('auth-success');
+      if (errEl.textContent.trim()) errEl.classList.add('show');
+      if (succEl.textContent.trim()) succEl.classList.add('show');
+    })();
+  </script>
+</body>
+
+</html>
