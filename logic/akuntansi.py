@@ -8,7 +8,7 @@ ACCOUNT_CODES = {
     "Bangunan": "123", "Akumulasi Penyusutan Peralatan": "121.1",
     "Akumulasi Penyusutan Kendaraan": "122.1",
     "Akumulasi Penyusutan Bangunan": "123.1",
-    "Utang Usaha": "211", "Utang Gaji": "212",
+    "Utang Usaha": "211", "Utang Bank": "212", "Utang Gaji": "213",
     "Pendapatan Diterima Dimuka": "213", "Utang Asuransi": "214",
     "Modal": "311", "Prive": "312", "Ikhtisar Laba Rugi": "313",
     "Pendapatan Jasa": "411", "Pendapatan Sewa": "412",
