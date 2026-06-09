@@ -38,15 +38,10 @@ def make_client(access_token: Optional[str] = None,
         raise RuntimeError(
             "SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env"
         )
+    client = create_client(url, key)
     if access_token:
-        # Set auth header directly — avoids set_session issues in serverless
-        from supabase.lib.client_options import SyncClientOptions
-        options = SyncClientOptions(
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        client = create_client(url, key, options=options)
-    else:
-        client = create_client(url, key)
+        # Set the user's JWT as the Authorization header for PostgREST (RLS)
+        client.postgrest.session.headers["Authorization"] = f"Bearer {access_token}"
     return client
 
 
