@@ -40,8 +40,10 @@ def make_client(access_token: Optional[str] = None,
         )
     client = create_client(url, key)
     if access_token:
-        # Set the user's JWT as the Authorization header for PostgREST (RLS)
-        client.postgrest.session.headers["Authorization"] = f"Bearer {access_token}"
+        # Set the user's JWT on BOTH header dicts — session.headers AND self.headers
+        bearer = f"Bearer {access_token}"
+        client.postgrest.session.headers["Authorization"] = bearer
+        client.postgrest.headers["Authorization"] = bearer
     return client
 
 
