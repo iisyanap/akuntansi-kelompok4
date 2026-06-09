@@ -30,7 +30,7 @@ def make_client(access_token: Optional[str] = None,
     """
     Return a Supabase client.
     - Without access_token: uses the anon key (for auth operations only).
-    - With access_token:    authenticates as the user, enabling RLS-protected queries.
+    - With access_token:    authenticates as the user via direct header injection.
     """
     url = get_url()
     key = get_anon_key()
@@ -38,12 +38,15 @@ def make_client(access_token: Optional[str] = None,
         raise RuntimeError(
             "SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env"
         )
-    client = create_client(url, key)
     if access_token:
-        client.auth.set_session(
-            access_token=access_token,
-            refresh_token=refresh_token or ""
+        # Set auth header directly — avoids set_session issues in serverless
+        from supabase.lib.client_options import SyncClientOptions
+        options = SyncClientOptions(
+            headers={"Authorization": f"Bearer {access_token}"}
         )
+        client = create_client(url, key, options=options)
+    else:
+        client = create_client(url, key)
     return client
 
 
