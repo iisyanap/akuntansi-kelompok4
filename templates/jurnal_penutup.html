@@ -10,7 +10,12 @@
 <div style="display:flex;gap:10px;margin-bottom:20px;" class="no-print">
   <a href="{{ url_for('export_jurnal_penutup_route') }}" class="btn btn-ghost">📥 Export Excel</a>
   <button onclick="window.print()" class="btn btn-ghost">🖨 Print</button>
-  <a href="{{ url_for('index') }}" class="btn btn-ghost">⟳ Mulai Periode Baru</a>
+  <form method="POST" action="{{ url_for('company_next_period', company_id=company_id) }}" style="display:inline;">
+    <button type="submit" class="btn btn-success">
+      ⏭ Buat Periode Berikutnya
+    </button>
+  </form>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">← Dashboard</a>
 </div>
 
 <div class="alert alert-info" style="font-size:12px;">
@@ -46,7 +51,8 @@
         <!-- Debit -->
         {% for j, item in e.debit_entries | enumerate %}
         <tr>
-          {% if j == 0 %}<td rowspan="{{ e.debit_entries|length + e.kredit_entries|length }}">{{ e.tanggal }}</td>{% endif %}
+          {% if j == 0 %}<td rowspan="{{ e.debit_entries|length + e.kredit_entries|length }}">{{ e.tanggal }}</td>{%
+          endif %}
           <td class="acc-name">{{ item.akun }}</td>
           <td><span class="badge" style="background:rgba(79,142,247,0.15);color:var(--accent);">JP{{ i+1 }}</span></td>
           <td class="debit-val">{{ item.jumlah | fmt_currency(currency) }}</td>
@@ -70,7 +76,9 @@
             📝 {{ e.keterangan }}
           </td>
         </tr>
-        <tr style="height:6px; background:var(--bg);"><td colspan="5"></td></tr>
+        <tr style="height:6px; background:var(--bg);">
+          <td colspan="5"></td>
+        </tr>
         {% endfor %}
         <tr class="tbl-footer">
           <td colspan="3">T O T A L</td>

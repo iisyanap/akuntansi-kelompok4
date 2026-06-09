@@ -303,3 +303,58 @@ def build_jurnal_penutup(laporan, periode):
         })
 
     return entries
+
+
+# ── Compute Closing Balances (for period continuation) ─────────────────
+def compute_closing_balances(jurnal_list, jurnal_penyesuaian, opening_balances,
+                             nama_pemilik="", periode=""):
+    """
+    Run the full accounting cycle and return post-closing balances suitable
+    as opening_balances for the next period.
+
+    Returns: dict of {account_name: {"debit": x, "kredit": y}}
+    Only balance-sheet accounts are included (asset, liability, equity, contra_asset).
+    Revenue, expense, and drawing accounts are zeroed out by closing entries.
+    """
+    if not jurnal_list:
+        return {}
+
+    bb = build_buku_besar(jurnal_list, jurnal_penyesuaian or None,
+                          opening_balances or None)
+    ns = build_neraca_saldo(bb)
+    jp = jurnal_penyesuaian or []
+    kk = build_kertas_kerja(ns, jp)
+    p_owner = nama_pemilik or ""
+    p_period = periode or ""
+    lap = build_laporan(kk, "", p_owner, p_period)
+    jpen = build_jurnal_penutup(lap, p_period)
+
+    # Build running balances from NSD (neraca saldo disesuaikan)
+    balances = {}  # account -> net (positive = debit, negative = kredit)
+    for r in kk:
+        net = r["nsd_d"] - r["nsd_k"]
+        balances[r["akun"]] = net
+
+    # Apply closing entries
+    for entry in jpen:
+        for item in entry.get("debit_entries", []):
+            acc = item["akun"]
+            balances[acc] = balances.get(acc, 0) + item["jumlah"]
+        for item in entry.get("kredit_entries", []):
+            acc = item["akun"]
+            balances[acc] = balances.get(acc, 0) - item["jumlah"]
+
+    # Extract only balance-sheet accounts with non-zero balances
+    result = {}
+    for acc, net in balances.items():
+        t = get_account_type(acc)
+        if t in ("revenue", "expense", "drawing"):
+            continue
+        if abs(net) < 0.01:
+            continue
+        if net > 0:
+            result[acc] = {"debit": net, "kredit": 0}
+        else:
+            result[acc] = {"debit": 0, "kredit": abs(net)}
+
+    return result

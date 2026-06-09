@@ -70,3 +70,42 @@ CREATE POLICY "Users manage own chat"
 CREATE INDEX idx_journal_user_type   ON journal_entries (user_id, type, sort_order);
 CREATE INDEX idx_companies_user      ON companies (user_id);
 CREATE INDEX idx_chat_user           ON chat_history (user_id);
+
+
+-- ══════════════════════════════════════════════════════════════════════════
+--  MIGRATION: Multi-Company Support
+--  Run this AFTER the initial schema above to enable multiple companies
+--  per user and period continuation.
+-- ══════════════════════════════════════════════════════════════════════════
+
+-- ── M1. Allow multiple companies per user ─────────────────────────────────
+ALTER TABLE companies DROP CONSTRAINT IF EXISTS companies_user_id_key;
+
+-- ── M2. Add company_id to journal_entries ─────────────────────────────────
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_journal_company ON journal_entries (company_id, type, sort_order);
+
+-- ── M3. Add company_id to chat_history ───────────────────────────────────
+ALTER TABLE chat_history ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
+ALTER TABLE chat_history DROP CONSTRAINT IF EXISTS chat_history_user_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_user_company ON chat_history (user_id, company_id);
+
+-- ── M4. Drop and recreate RLS policies with company_id scope ─────────────
+DROP POLICY IF EXISTS "Users manage own companies" ON companies;
+DROP POLICY IF EXISTS "Users manage own journals" ON journal_entries;
+DROP POLICY IF EXISTS "Users manage own chat" ON chat_history;
+
+CREATE POLICY "Users manage own companies"
+  ON companies FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users manage own journals"
+  ON journal_entries FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users manage own chat"
+  ON chat_history FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

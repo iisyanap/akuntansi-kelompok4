@@ -4,8 +4,8 @@ Wraps all CRUD operations against Supabase (PostgreSQL + Auth).
 
 Tables expected:
   - companies        (user_id UUID, nama, pemilik, periode, jenis, currency, opening_balances JSONB)
-  - journal_entries  (user_id UUID, type, tanggal, keterangan, debit_entries JSONB, kredit_entries JSONB, sort_order INT)
-  - chat_history     (user_id UUID, messages JSONB)
+  - journal_entries  (user_id UUID, company_id UUID, type, tanggal, keterangan, debit_entries JSONB, kredit_entries JSONB, sort_order INT)
+  - chat_history     (user_id UUID, company_id UUID, messages JSONB)
 """
 
 import os
@@ -76,21 +76,8 @@ def auth_sign_in(email: str, password: str):
 #  COMPANIES
 # ──────────────────────────────────────────────────────────────────────────
 
-def get_company(access_token: str, user_id: str,
-                refresh_token: str = "") -> Optional[dict]:
-    """Return the first company for a user, or None."""
-    client = make_client(access_token, refresh_token)
-    resp = (
-        client.table("companies")
-        .select("*")
-        .eq("user_id", user_id)
-        .limit(1)
-        .execute()
-    )
-    rows = resp.data or []
-    if not rows:
-        return None
-    row = rows[0]
+def _row_to_company(row: dict) -> dict:
+    """Convert a Supabase row to a company dict."""
     return {
         "id":               row["id"],
         "nama":             row.get("nama", ""),
@@ -102,11 +89,51 @@ def get_company(access_token: str, user_id: str,
     }
 
 
-def save_company(access_token: str, user_id: str, data: dict,
-                 refresh_token: str = "") -> dict:
-    """Insert or update the user's company record."""
+def get_companies(access_token: str, user_id: str,
+                  refresh_token: str = "") -> list[dict]:
+    """Return all companies for a user, ordered by created_at."""
     client = make_client(access_token, refresh_token)
-    existing = get_company(access_token, user_id, refresh_token)
+    resp = (
+        client.table("companies")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at")
+        .execute()
+    )
+    return [_row_to_company(r) for r in (resp.data or [])]
+
+
+def get_company(access_token: str, user_id: str,
+                refresh_token: str = "") -> Optional[dict]:
+    """Return the first company for a user, or None. (backward compat)"""
+    companies = get_companies(access_token, user_id, refresh_token)
+    return companies[0] if companies else None
+
+
+def get_company_by_id(access_token: str, user_id: str, company_id: str,
+                      refresh_token: str = "") -> Optional[dict]:
+    """Return a specific company by ID, or None."""
+    client = make_client(access_token, refresh_token)
+    resp = (
+        client.table("companies")
+        .select("*")
+        .eq("id", company_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    rows = resp.data or []
+    return _row_to_company(rows[0]) if rows else None
+
+
+def save_company(access_token: str, user_id: str, data: dict,
+                 company_id: str = "",
+                 refresh_token: str = "") -> dict:
+    """Insert or update a company record.
+    - If company_id is provided: update that specific company.
+    - If company_id is empty: insert a new company.
+    """
+    client = make_client(access_token, refresh_token)
     payload = {
         "user_id":          user_id,
         "nama":             data.get("nama", ""),
@@ -116,17 +143,38 @@ def save_company(access_token: str, user_id: str, data: dict,
         "currency":         data.get("currency", "IDR"),
         "opening_balances": data.get("opening_balances", {}),
     }
-    if existing:
+    if company_id:
         resp = (
             client.table("companies")
             .update(payload)
+            .eq("id", company_id)
             .eq("user_id", user_id)
             .execute()
         )
     else:
         resp = client.table("companies").insert(payload).execute()
     rows = resp.data or []
-    return rows[0] if rows else {}
+    return _row_to_company(rows[0]) if rows else {}
+
+
+def delete_company(access_token: str, user_id: str, company_id: str,
+                   refresh_token: str = "") -> bool:
+    """Delete a company and all its related data (journals, chat)."""
+    client = make_client(access_token, refresh_token)
+    # Delete journals and chat for this company first
+    client.table("journal_entries").delete().eq(
+        "user_id", user_id).eq("company_id", company_id).execute()
+    client.table("chat_history").delete().eq(
+        "user_id", user_id).eq("company_id", company_id).execute()
+    # Delete the company itself
+    resp = (
+        client.table("companies")
+        .delete()
+        .eq("id", company_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    return bool(resp.data)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -135,14 +183,20 @@ def save_company(access_token: str, user_id: str, data: dict,
 
 def get_journals(access_token: str, user_id: str,
                  entry_type: str = "jurnal",
-                 refresh_token: str = "") -> list[dict]:
-    """Return all journal entries for a user, ordered by sort_order."""
+                 refresh_token: str = "",
+                 company_id: str = "") -> list[dict]:
+    """Return all journal entries for a user+company, ordered by sort_order."""
     client = make_client(access_token, refresh_token)
-    resp = (
+    query = (
         client.table("journal_entries")
         .select("*")
         .eq("user_id", user_id)
         .eq("type", entry_type)
+    )
+    if company_id:
+        query = query.eq("company_id", company_id)
+    resp = (
+        query
         .order("sort_order")
         .order("created_at")
         .execute()
@@ -163,10 +217,12 @@ def get_journals(access_token: str, user_id: str,
 
 def add_journal(access_token: str, user_id: str,
                 entry: dict, entry_type: str = "jurnal",
-                refresh_token: str = "") -> dict:
+                refresh_token: str = "",
+                company_id: str = "") -> dict:
     """Insert a new journal entry. Returns the inserted row."""
     client = make_client(access_token, refresh_token)
-    existing = get_journals(access_token, user_id, entry_type, refresh_token)
+    existing = get_journals(access_token, user_id, entry_type,
+                            refresh_token, company_id)
     next_order = len(existing)
 
     payload = {
@@ -178,6 +234,8 @@ def add_journal(access_token: str, user_id: str,
         "kredit_entries": entry.get("kredit_entries", []),
         "sort_order":     next_order,
     }
+    if company_id:
+        payload["company_id"] = company_id
     resp = client.table("journal_entries").insert(payload).execute()
     rows = resp.data or []
     inserted = rows[0] if rows else {}
@@ -192,30 +250,42 @@ def add_journal(access_token: str, user_id: str,
 
 def delete_journal_by_index(access_token: str, user_id: str,
                             idx: int, entry_type: str = "jurnal",
-                            refresh_token: str = "") -> bool:
+                            refresh_token: str = "",
+                            company_id: str = "") -> bool:
     """Delete a journal entry by its positional index."""
-    journals = get_journals(access_token, user_id, entry_type, refresh_token)
+    journals = get_journals(access_token, user_id, entry_type,
+                            refresh_token, company_id)
     if 0 <= idx < len(journals):
         client = make_client(access_token, refresh_token)
         entry_id = journals[idx]["id"]
-        resp = (
+        query = (
             client.table("journal_entries")
             .delete()
             .eq("id", entry_id)
             .eq("user_id", user_id)
-            .execute()
         )
+        if company_id:
+            query = query.eq("company_id", company_id)
+        resp = query.execute()
         return bool(resp.data)
     return False
 
 
 def clear_journals(access_token: str, user_id: str,
                    entry_type: str = "jurnal",
-                   refresh_token: str = "") -> None:
-    """Delete all journal entries of a given type for a user."""
+                   refresh_token: str = "",
+                   company_id: str = "") -> None:
+    """Delete all journal entries of a given type for a user+company."""
     client = make_client(access_token, refresh_token)
-    client.table("journal_entries").delete().eq(
-        "user_id", user_id).eq("type", entry_type).execute()
+    query = (
+        client.table("journal_entries")
+        .delete()
+        .eq("user_id", user_id)
+        .eq("type", entry_type)
+    )
+    if company_id:
+        query = query.eq("company_id", company_id)
+    query.execute()
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -223,16 +293,18 @@ def clear_journals(access_token: str, user_id: str,
 # ──────────────────────────────────────────────────────────────────────────
 
 def get_chat_history(access_token: str, user_id: str,
-                     refresh_token: str = "") -> list[dict]:
+                     refresh_token: str = "",
+                     company_id: str = "") -> list[dict]:
     """Return stored AI chat messages, or empty list."""
     client = make_client(access_token, refresh_token)
-    resp = (
+    query = (
         client.table("chat_history")
         .select("messages")
         .eq("user_id", user_id)
-        .limit(1)
-        .execute()
     )
+    if company_id:
+        query = query.eq("company_id", company_id)
+    resp = query.limit(1).execute()
     rows = resp.data or []
     if not rows:
         return []
@@ -241,32 +313,42 @@ def get_chat_history(access_token: str, user_id: str,
 
 def save_chat_history(access_token: str, user_id: str,
                       messages: list[dict],
-                      refresh_token: str = "") -> None:
-    """Upsert the chat history for a user."""
+                      refresh_token: str = "",
+                      company_id: str = "") -> None:
+    """Upsert the chat history for a user+company."""
     client = make_client(access_token, refresh_token)
-    existing = (
+    query = (
         client.table("chat_history")
         .select("id")
         .eq("user_id", user_id)
-        .limit(1)
-        .execute()
     )
+    if company_id:
+        query = query.eq("company_id", company_id)
+    existing = query.limit(1).execute()
+
     if existing.data:
-        client.table("chat_history").update(
+        upd = client.table("chat_history").update(
             {"messages": messages}
-        ).eq("user_id", user_id).execute()
+        ).eq("user_id", user_id)
+        if company_id:
+            upd = upd.eq("company_id", company_id)
+        upd.execute()
     else:
-        client.table("chat_history").insert({
-            "user_id":  user_id,
-            "messages": messages,
-        }).execute()
+        payload = {"user_id": user_id, "messages": messages}
+        if company_id:
+            payload["company_id"] = company_id
+        client.table("chat_history").insert(payload).execute()
 
 
 def clear_chat_history(access_token: str, user_id: str,
-                       refresh_token: str = "") -> None:
-    """Remove all chat messages for a user."""
+                       refresh_token: str = "",
+                       company_id: str = "") -> None:
+    """Remove all chat messages for a user+company."""
     client = make_client(access_token, refresh_token)
-    client.table("chat_history").delete().eq("user_id", user_id).execute()
+    query = client.table("chat_history").delete().eq("user_id", user_id)
+    if company_id:
+        query = query.eq("company_id", company_id)
+    query.execute()
 
 
 # ──────────────────────────────────────────────────────────────────────────

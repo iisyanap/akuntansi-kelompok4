@@ -91,11 +91,30 @@
         <div class="logo-sub">Sistem Akuntansi</div>
       </div>
 
-      <!-- Sidebar logo only, no close button inside -->
+      <!-- Active company badge -->
+      {% if perusahaan and perusahaan.nama %}
+      <div style="padding:8px 16px; margin-bottom:4px;">
+        <div style="padding:8px 12px; background:rgba(79,142,247,0.08); border:1px solid rgba(79,142,247,0.2);
+                    border-radius:6px; font-size:11px;">
+          <div style="color:var(--text3); font-size:10px; text-transform:uppercase; letter-spacing:0.5px;
+                      margin-bottom:2px;">Perusahaan Aktif</div>
+          <a href="{{ url_for('dashboard') }}" style="color:var(--accent); font-weight:600; text-decoration:none;
+             display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            {{ perusahaan.nama }}
+          </a>
+          <div style="color:var(--text3); font-size:10px; margin-top:1px;">
+            {{ perusahaan.periode or '' }}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <nav class="nav">
         <div class="nav-group">
-          <div class="nav-label">Setup</div>
-          <a href="{{ url_for('index') }}" class="{% if request.endpoint=='index' %}active{% endif %}">
+          <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint=='dashboard' %}active{% endif %}">
+            <span class="nav-icon">🏢</span> Dashboard
+          </a>
+          <a href="{{ url_for('setup') }}" class="{% if request.endpoint=='setup' %}active{% endif %}">
             <span class="nav-step">0</span> Setup Perusahaan
           </a>
         </div>

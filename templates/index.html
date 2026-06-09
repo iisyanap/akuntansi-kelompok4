@@ -1,13 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Setup Perusahaan{% endblock %}
+{% block title %}{% if is_edit %}Edit Perusahaan{% else %}Setup Perusahaan{% endif %}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>⚙️ Setup Perusahaan</h1>
-  <p>Isi data perusahaan sebelum memulai siklus akuntansi</p>
+  <h1>{% if is_edit %}✏️ Edit Perusahaan{% else %}⚙️ Setup Perusahaan Baru{% endif %}</h1>
+  <p>{% if is_edit %}Perbarui data perusahaan {{ perusahaan.nama }}{% else %}Isi data perusahaan sebelum memulai siklus
+    akuntansi{% endif %}</p>
 </div>
 
 <div style="max-width: 720px;">
-  <form method="POST" action="{{ url_for('setup') }}" id="setup-form">
+  <form method="POST" action="{{ url_for('setup_save') }}" id="setup-form">
+    <input type="hidden" name="company_id" value="{{ company_id or '' }}">
 
     <!-- INFO PERUSAHAAN -->
     <div class="card">
@@ -15,33 +17,28 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
         <div class="form-group">
           <label>Nama Perusahaan</label>
-          <input type="text" name="nama_perusahaan"
-                 placeholder="cth: Service Mesin Cuci Amir"
-                 value="{{ perusahaan.nama or '' }}" required>
+          <input type="text" name="nama_perusahaan" placeholder="cth: Service Mesin Cuci Amir"
+            value="{{ perusahaan.nama or '' }}" required>
         </div>
         <div class="form-group">
           <label>Nama Pemilik</label>
-          <input type="text" name="nama_pemilik"
-                 placeholder="cth: Tuan Amir Makmur"
-                 value="{{ perusahaan.pemilik or '' }}" required>
+          <input type="text" name="nama_pemilik" placeholder="cth: Tuan Amir Makmur"
+            value="{{ perusahaan.pemilik or '' }}" required>
         </div>
         <div class="form-group">
           <label>Periode (Bulan & Tahun)</label>
-          <input type="text" name="periode"
-                 placeholder="cth: April 2008"
-                 value="{{ perusahaan.periode or '' }}" required>
+          <input type="text" name="periode" placeholder="cth: April 2008" value="{{ perusahaan.periode or '' }}"
+            required>
         </div>
         <div class="form-group">
           <label>Jenis Usaha</label>
-          <input type="text" name="jenis_usaha"
-                 placeholder="cth: Perusahaan Jasa"
-                 value="{{ perusahaan.jenis or '' }}">
+          <input type="text" name="jenis_usaha" placeholder="cth: Perusahaan Jasa" value="{{ perusahaan.jenis or '' }}">
         </div>
         <div class="form-group">
           <label>Mata Uang</label>
           <select name="currency">
-            <option value="IDR" {% if perusahaan.currency != 'USD' %}selected{% endif %}>🇮🇩 Rupiah (IDR — Rp)</option>
-            <option value="USD" {% if perusahaan.currency == 'USD' %}selected{% endif %}>🇺🇸 Dollar (USD — $)</option>
+            <option value="IDR" {% if perusahaan.currency !='USD' %}selected{% endif %}>🇮🇩 Rupiah (IDR — Rp)</option>
+            <option value="USD" {% if perusahaan.currency=='USD' %}selected{% endif %}>🇺🇸 Dollar (USD — $)</option>
           </select>
         </div>
       </div>
@@ -69,25 +66,18 @@
         <!-- Render saldo awal yang sudah tersimpan -->
         {% for akun, saldo in opening_balances.items() %}
         <div class="entry-row" style="margin-bottom:8px;">
-          <input type="text" name="ob_account"
-                 value="{{ akun }}"
-                 placeholder="Nama Akun (cth: Kas)" style="flex:2">
-          <input type="number" name="ob_debit"
-                 value="{{ saldo.debit | int if saldo.debit else '' }}"
-                 placeholder="Debit" min="0" style="flex:1">
-          <input type="number" name="ob_kredit"
-                 value="{{ saldo.kredit | int if saldo.kredit else '' }}"
-                 placeholder="Kredit" min="0" style="flex:1">
-          <button type="button"
-                  class="btn btn-danger btn-remove btn-sm"
-                  onclick="this.parentElement.remove()"
-                  style="width:32px; height:32px; padding:0; flex-shrink:0;">✕</button>
+          <input type="text" name="ob_account" value="{{ akun }}" placeholder="Nama Akun (cth: Kas)" style="flex:2">
+          <input type="number" name="ob_debit" value="{{ saldo.debit | int if saldo.debit else '' }}"
+            placeholder="Debit" min="0" style="flex:1">
+          <input type="number" name="ob_kredit" value="{{ saldo.kredit | int if saldo.kredit else '' }}"
+            placeholder="Kredit" min="0" style="flex:1">
+          <button type="button" class="btn btn-danger btn-remove btn-sm" onclick="this.parentElement.remove()"
+            style="width:32px; height:32px; padding:0; flex-shrink:0;">✕</button>
         </div>
         {% endfor %}
       </div>
 
-      <button type="button" class="btn btn-ghost btn-sm"
-              onclick="addOBRow()" style="margin-top:8px;">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addOBRow()" style="margin-top:8px;">
         + Tambah Akun Saldo Awal
       </button>
 
@@ -105,8 +95,7 @@
       {% endif %}
     </div>
 
-    <button type="submit" class="btn btn-primary"
-            style="width:100%; justify-content:center; padding:12px;">
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
       💾 Simpan Setup
     </button>
   </form>
@@ -125,18 +114,21 @@
       &nbsp;·&nbsp; Saldo Awal: <span style="color:var(--accent2);">{{ opening_balances | length }} akun</span>
       {% endif %}
     </div>
-    <a href="{{ url_for('jurnal') }}" class="btn btn-success">→ Lanjut ke Jurnal Umum</a>
+    <div style="display:flex; gap:8px;">
+      <a href="{{ url_for('jurnal') }}" class="btn btn-success">→ Lanjut ke Jurnal Umum</a>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+    </div>
   </div>
   {% endif %}
 </div>
 
 <script>
-function addOBRow() {
-  const list = document.getElementById('ob-list');
-  const row  = document.createElement('div');
-  row.className = 'entry-row';
-  row.style.marginBottom = '8px';
-  row.innerHTML = `
+  function addOBRow() {
+    const list = document.getElementById('ob-list');
+    const row = document.createElement('div');
+    row.className = 'entry-row';
+    row.style.marginBottom = '8px';
+    row.innerHTML = `
     <input type="text"   name="ob_account" placeholder="Nama Akun (cth: Kas)"  style="flex:2">
     <input type="number" name="ob_debit"   placeholder="Debit"  min="0" style="flex:1">
     <input type="number" name="ob_kredit"  placeholder="Kredit" min="0" style="flex:1">
@@ -144,9 +136,9 @@ function addOBRow() {
             onclick="this.parentElement.remove()"
             style="width:32px; height:32px; padding:0; flex-shrink:0;">✕</button>
   `;
-  list.appendChild(row);
-  // fokus ke input akun yang baru ditambah
-  row.querySelector('input[name="ob_account"]').focus();
-}
+    list.appendChild(row);
+    // fokus ke input akun yang baru ditambah
+    row.querySelector('input[name="ob_account"]').focus();
+  }
 </script>
 {% endblock %}
