@@ -19,14 +19,15 @@ ACCOUNT_CODES = {
     "Beban Air, Listrik dan Telepon": "520",
 }
 
+
 def get_account_type(account_name):
     """Tentukan tipe akun: asset/liability/equity/revenue/expense"""
     n = account_name.lower()
     if any(x in n for x in ["akumulasi", "utang", "diterima dimuka", "pendapatan diterima"]):
         return "liability" if "utang" in n or "diterima dimuka" in n else "contra_asset"
     if any(x in n for x in ["kas", "piutang", "perlengkapan", "peralatan", "kendaraan",
-                              "bangunan", "dibayar dimuka", "asuransi dibayar", "iklan dibayar",
-                              "sewa dibayar"]):
+                            "bangunan", "dibayar dimuka", "asuransi dibayar", "iklan dibayar",
+                            "sewa dibayar"]):
         return "asset"
     if "modal" in n:
         return "equity"
@@ -38,6 +39,7 @@ def get_account_type(account_name):
         return "expense"
     return "asset"
 
+
 def normal_balance(account_name):
     t = get_account_type(account_name)
     if t in ("asset", "expense", "drawing"):
@@ -45,6 +47,8 @@ def normal_balance(account_name):
     return "credit"
 
 # ── Buku Besar ─────────────────────────────────────────────────────────────
+
+
 def build_buku_besar(jurnal_entries, jurnal_penyesuaian=None, opening_balances=None):
     """
     Bangun buku besar dari jurnal umum + jurnal penyesuaian.
@@ -83,19 +87,14 @@ def build_buku_besar(jurnal_entries, jurnal_penyesuaian=None, opening_balances=N
                         running[acc]["debit"] += amt
                     else:
                         running[acc]["kredit"] += amt
-                    nb = normal_balance(acc)
-                    saldo = running[acc]["debit"] - running[acc]["kredit"]
-                    saldo_d = saldo if saldo >= 0 and nb == "debit" else (saldo if saldo > 0 else 0)
-                    saldo_k = abs(saldo) if saldo < 0 or nb == "kredit" else 0
-                    if nb == "debit":
-                        saldo_d = max(saldo, 0)
-                        saldo_k = max(-saldo, 0)
+                    # Hitung saldo berjalan: net = total debit - total kredit
+                    net = running[acc]["debit"] - running[acc]["kredit"]
+                    if net >= 0:
+                        saldo_d = net
+                        saldo_k = 0
                     else:
-                        saldo_k = running[acc]["kredit"] - running[acc]["debit"]
                         saldo_d = 0
-                        if saldo_k < 0:
-                            saldo_d = abs(saldo_k)
-                            saldo_k = 0
+                        saldo_k = abs(net)
                     ledger[acc].append({
                         "tanggal": tgl, "keterangan": ket,
                         "ref": ref_prefix,
@@ -113,6 +112,8 @@ def build_buku_besar(jurnal_entries, jurnal_penyesuaian=None, opening_balances=N
     return dict(ledger)
 
 # ── Neraca Saldo ───────────────────────────────────────────────────────────
+
+
 def build_neraca_saldo(buku_besar):
     """Ambil saldo akhir tiap akun dari buku besar"""
     result = []
@@ -131,6 +132,8 @@ def build_neraca_saldo(buku_besar):
     return result
 
 # ── Kertas Kerja ───────────────────────────────────────────────────────────
+
+
 def build_kertas_kerja(neraca_saldo, jurnal_penyesuaian):
     """Buat kertas kerja 10 kolom"""
     # Kumpulkan semua AJP per akun
@@ -147,7 +150,8 @@ def build_kertas_kerja(neraca_saldo, jurnal_penyesuaian):
     extra_accounts = set(ajp_debit.keys()) | set(ajp_kredit.keys())
     for acc in extra_accounts:
         if acc not in all_accounts:
-            all_accounts[acc] = {"kode": ACCOUNT_CODES.get(acc, "---"), "akun": acc, "debit": 0, "kredit": 0}
+            all_accounts[acc] = {"kode": ACCOUNT_CODES.get(
+                acc, "---"), "akun": acc, "debit": 0, "kredit": 0}
 
     rows = []
     for acc, ns in all_accounts.items():
@@ -162,12 +166,14 @@ def build_kertas_kerja(neraca_saldo, jurnal_penyesuaian):
             nsd_d = ns_d + ajp_d - ajp_k
             nsd_k = 0
             if nsd_d < 0:
-                nsd_k = abs(nsd_d); nsd_d = 0
+                nsd_k = abs(nsd_d)
+                nsd_d = 0
         else:
             nsd_k = ns_k + ajp_k - ajp_d
             nsd_d = 0
             if nsd_k < 0:
-                nsd_d = abs(nsd_k); nsd_k = 0
+                nsd_d = abs(nsd_k)
+                nsd_k = 0
 
         t = get_account_type(acc)
         # Laba Rugi: pendapatan & beban
@@ -193,17 +199,22 @@ def build_kertas_kerja(neraca_saldo, jurnal_penyesuaian):
     return rows
 
 # ── Laporan Keuangan ───────────────────────────────────────────────────────
+
+
 def build_laporan(kertas_kerja, nama_perusahaan, nama_pemilik, periode):
     # Laba Rugi
-    pendapatan = [(r["akun"], r["lr_k"]) for r in kertas_kerja if r["lr_k"] > 0]
+    pendapatan = [(r["akun"], r["lr_k"])
+                  for r in kertas_kerja if r["lr_k"] > 0]
     beban = [(r["akun"], r["lr_d"]) for r in kertas_kerja if r["lr_d"] > 0]
     total_pendapatan = sum(v for _, v in pendapatan)
     total_beban = sum(v for _, v in beban)
     laba_bersih = total_pendapatan - total_beban
 
     # Perubahan Modal
-    modal_awal = next((r["ner_k"] for r in kertas_kerja if "modal" in r["akun"].lower() and "prive" not in r["akun"].lower()), 0)
-    prive = next((r["ner_d"] for r in kertas_kerja if "prive" in r["akun"].lower()), 0)
+    modal_awal = next((r["ner_k"] for r in kertas_kerja if "modal" in r["akun"].lower(
+    ) and "prive" not in r["akun"].lower()), 0)
+    prive = next((r["ner_d"]
+                 for r in kertas_kerja if "prive" in r["akun"].lower()), 0)
     modal_akhir = modal_awal + laba_bersih - prive
 
     # Neraca
@@ -240,6 +251,8 @@ def build_laporan(kertas_kerja, nama_perusahaan, nama_pemilik, periode):
     }
 
 # ── Jurnal Penutup ─────────────────────────────────────────────────────────
+
+
 def build_jurnal_penutup(laporan, periode):
     entries = []
     lr = laporan["laba_rugi"]
