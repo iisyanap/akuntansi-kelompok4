@@ -96,6 +96,10 @@ def _token():
     return session.get("access_token", "")
 
 
+def _refresh():
+    return session.get("refresh_token", "")
+
+
 def _get_company():
     """Return company dict for current user, or empty dict."""
     uid = _uid()
@@ -103,7 +107,7 @@ def _get_company():
     if not uid or not token:
         return {}
     try:
-        return db.get_company(token, uid) or {}
+        return db.get_company(token, uid, _refresh()) or {}
     except Exception:
         return {}
 
@@ -114,7 +118,7 @@ def _get_journals(entry_type="jurnal"):
     if not uid or not token:
         return []
     try:
-        return db.get_journals(token, uid, entry_type)
+        return db.get_journals(token, uid, entry_type, _refresh())
     except Exception:
         return []
 
@@ -158,6 +162,7 @@ def auth_login():
     user = resp.user
     session["user_id"] = user.id
     session["access_token"] = sess.access_token
+    session["refresh_token"] = sess.refresh_token
     session["user_email"] = user.email
     session.permanent = True
     return redirect(url_for("index"))
@@ -185,6 +190,7 @@ def auth_register():
         user = resp.user
         session["user_id"] = user.id
         session["access_token"] = sess.access_token
+        session["refresh_token"] = sess.refresh_token
         session["user_email"] = user.email
         session.permanent = True
         return redirect(url_for("index"))
@@ -232,7 +238,7 @@ def setup():
         "currency":         request.form.get("currency", "IDR"),
         "opening_balances": ob,
     }
-    db.save_company(_token(), _uid(), company_data)
+    db.save_company(_token(), _uid(), company_data, refresh_token=_refresh())
     return redirect(url_for("jurnal"))
 
 # ── Jurnal Umum ────────────────────────────────────────────────────────────
@@ -272,21 +278,23 @@ def jurnal_add():
         "debit_entries":  debit_entries,
         "kredit_entries": kredit_entries,
     }
-    saved = db.add_journal(_token(), _uid(), entry, "jurnal")
+    saved = db.add_journal(_token(), _uid(), entry,
+                           "jurnal", refresh_token=_refresh())
     return jsonify({"success": True, "entry": saved})
 
 
 @app.route("/jurnal/delete/<int:idx>", methods=["POST"])
 @login_required
 def jurnal_delete(idx):
-    db.delete_journal_by_index(_token(), _uid(), idx, "jurnal")
+    db.delete_journal_by_index(
+        _token(), _uid(), idx, "jurnal", refresh_token=_refresh())
     return redirect(url_for("jurnal"))
 
 
 @app.route("/jurnal/clear", methods=["POST"])
 @login_required
 def jurnal_clear():
-    db.clear_journals(_token(), _uid(), "jurnal")
+    db.clear_journals(_token(), _uid(), "jurnal", refresh_token=_refresh())
     return redirect(url_for("jurnal"))
 
 # ── Buku Besar ─────────────────────────────────────────────────────────────
@@ -368,14 +376,16 @@ def penyesuaian_add():
         "debit_entries":  debit_entries,
         "kredit_entries": kredit_entries,
     }
-    saved = db.add_journal(_token(), _uid(), entry, "penyesuaian")
+    saved = db.add_journal(_token(), _uid(), entry,
+                           "penyesuaian", refresh_token=_refresh())
     return jsonify({"success": True, "entry": saved})
 
 
 @app.route("/penyesuaian/delete/<int:idx>", methods=["POST"])
 @login_required
 def penyesuaian_delete(idx):
-    db.delete_journal_by_index(_token(), _uid(), idx, "penyesuaian")
+    db.delete_journal_by_index(
+        _token(), _uid(), idx, "penyesuaian", refresh_token=_refresh())
     return redirect(url_for("penyesuaian"))
 
 # ── Kertas Kerja ───────────────────────────────────────────────────────────
@@ -454,15 +464,17 @@ def jurnal_penutup():
 @login_required
 def reset():
     try:
-        db.delete_all_user_data(_token(), _uid())
+        db.delete_all_user_data(_token(), _uid(), refresh_token=_refresh())
     except Exception:
         pass
     uid = session.get("user_id")
     token = session.get("access_token")
+    refresh = session.get("refresh_token")
     email = session.get("user_email")
     session.clear()
     session["user_id"] = uid
     session["access_token"] = token
+    session["refresh_token"] = refresh
     session["user_email"] = email
     return redirect(url_for("index"))
 
@@ -600,7 +612,7 @@ def _history_for_template(raw: list) -> list:
 @login_required
 def ai_assistant():
     perusahaan = _get_company()
-    ch = db.get_chat_history(_token(), _uid())
+    ch = db.get_chat_history(_token(), _uid(), refresh_token=_refresh())
     return render_template(
         "ai_assistant.html",
         perusahaan=perusahaan,
@@ -659,7 +671,7 @@ def _ai_chat_handler():
 
     perusahaan = _get_company()
     jurnal_list = _get_journals("jurnal")
-    history = db.get_chat_history(_token(), _uid())
+    history = db.get_chat_history(_token(), _uid(), refresh_token=_refresh())
 
     try:
         response_text, updated_history = chat_with_memory(
@@ -676,7 +688,8 @@ def _ai_chat_handler():
             return jsonify({"error": "API key tidak valid."}), 400
         return jsonify({"error": f"Groq error: {err[:250]}"}), 500
 
-    db.save_chat_history(_token(), _uid(), updated_history)
+    db.save_chat_history(_token(), _uid(), updated_history,
+                         refresh_token=_refresh())
 
     return jsonify({
         "success":       True,
@@ -702,14 +715,14 @@ def ai_setup_company():
         "periode": periode, "jenis": jenis, "currency": currency,
         "opening_balances": _get_opening_balances(),
     }
-    db.save_company(_token(), _uid(), company_data)
+    db.save_company(_token(), _uid(), company_data, refresh_token=_refresh())
     return jsonify({"success": True, "perusahaan": company_data})
 
 
 @app.route("/ai/clear_memory", methods=["POST"])
 @login_required
 def ai_clear_memory():
-    db.clear_chat_history(_token(), _uid())
+    db.clear_chat_history(_token(), _uid(), refresh_token=_refresh())
     return jsonify({"success": True})
 
 # ── Debug ──────────────────────────────────────────────────────────────────

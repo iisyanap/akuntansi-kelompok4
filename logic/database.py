@@ -76,9 +76,10 @@ def auth_sign_in(email: str, password: str):
 #  COMPANIES
 # ──────────────────────────────────────────────────────────────────────────
 
-def get_company(access_token: str, user_id: str) -> Optional[dict]:
+def get_company(access_token: str, user_id: str,
+                refresh_token: str = "") -> Optional[dict]:
     """Return the first company for a user, or None."""
-    client = make_client(access_token)
+    client = make_client(access_token, refresh_token)
     resp = (
         client.table("companies")
         .select("*")
@@ -101,10 +102,11 @@ def get_company(access_token: str, user_id: str) -> Optional[dict]:
     }
 
 
-def save_company(access_token: str, user_id: str, data: dict) -> dict:
+def save_company(access_token: str, user_id: str, data: dict,
+                 refresh_token: str = "") -> dict:
     """Insert or update the user's company record."""
-    client = make_client(access_token)
-    existing = get_company(access_token, user_id)
+    client = make_client(access_token, refresh_token)
+    existing = get_company(access_token, user_id, refresh_token)
     payload = {
         "user_id":          user_id,
         "nama":             data.get("nama", ""),
@@ -132,9 +134,10 @@ def save_company(access_token: str, user_id: str, data: dict) -> dict:
 # ──────────────────────────────────────────────────────────────────────────
 
 def get_journals(access_token: str, user_id: str,
-                 entry_type: str = "jurnal") -> list[dict]:
+                 entry_type: str = "jurnal",
+                 refresh_token: str = "") -> list[dict]:
     """Return all journal entries for a user, ordered by sort_order."""
-    client = make_client(access_token)
+    client = make_client(access_token, refresh_token)
     resp = (
         client.table("journal_entries")
         .select("*")
@@ -159,10 +162,11 @@ def get_journals(access_token: str, user_id: str,
 
 
 def add_journal(access_token: str, user_id: str,
-                entry: dict, entry_type: str = "jurnal") -> dict:
+                entry: dict, entry_type: str = "jurnal",
+                refresh_token: str = "") -> dict:
     """Insert a new journal entry. Returns the inserted row."""
-    client = make_client(access_token)
-    existing = get_journals(access_token, user_id, entry_type)
+    client = make_client(access_token, refresh_token)
+    existing = get_journals(access_token, user_id, entry_type, refresh_token)
     next_order = len(existing)
 
     payload = {
@@ -187,11 +191,12 @@ def add_journal(access_token: str, user_id: str,
 
 
 def delete_journal_by_index(access_token: str, user_id: str,
-                            idx: int, entry_type: str = "jurnal") -> bool:
+                            idx: int, entry_type: str = "jurnal",
+                            refresh_token: str = "") -> bool:
     """Delete a journal entry by its positional index."""
-    journals = get_journals(access_token, user_id, entry_type)
+    journals = get_journals(access_token, user_id, entry_type, refresh_token)
     if 0 <= idx < len(journals):
-        client = make_client(access_token)
+        client = make_client(access_token, refresh_token)
         entry_id = journals[idx]["id"]
         resp = (
             client.table("journal_entries")
@@ -205,9 +210,10 @@ def delete_journal_by_index(access_token: str, user_id: str,
 
 
 def clear_journals(access_token: str, user_id: str,
-                   entry_type: str = "jurnal") -> None:
+                   entry_type: str = "jurnal",
+                   refresh_token: str = "") -> None:
     """Delete all journal entries of a given type for a user."""
-    client = make_client(access_token)
+    client = make_client(access_token, refresh_token)
     client.table("journal_entries").delete().eq(
         "user_id", user_id).eq("type", entry_type).execute()
 
@@ -216,9 +222,10 @@ def clear_journals(access_token: str, user_id: str,
 #  CHAT HISTORY
 # ──────────────────────────────────────────────────────────────────────────
 
-def get_chat_history(access_token: str, user_id: str) -> list[dict]:
+def get_chat_history(access_token: str, user_id: str,
+                     refresh_token: str = "") -> list[dict]:
     """Return stored AI chat messages, or empty list."""
-    client = make_client(access_token)
+    client = make_client(access_token, refresh_token)
     resp = (
         client.table("chat_history")
         .select("messages")
@@ -233,9 +240,10 @@ def get_chat_history(access_token: str, user_id: str) -> list[dict]:
 
 
 def save_chat_history(access_token: str, user_id: str,
-                      messages: list[dict]) -> None:
+                      messages: list[dict],
+                      refresh_token: str = "") -> None:
     """Upsert the chat history for a user."""
-    client = make_client(access_token)
+    client = make_client(access_token, refresh_token)
     existing = (
         client.table("chat_history")
         .select("id")
@@ -254,9 +262,10 @@ def save_chat_history(access_token: str, user_id: str,
         }).execute()
 
 
-def clear_chat_history(access_token: str, user_id: str) -> None:
+def clear_chat_history(access_token: str, user_id: str,
+                       refresh_token: str = "") -> None:
     """Remove all chat messages for a user."""
-    client = make_client(access_token)
+    client = make_client(access_token, refresh_token)
     client.table("chat_history").delete().eq("user_id", user_id).execute()
 
 
@@ -264,9 +273,10 @@ def clear_chat_history(access_token: str, user_id: str) -> None:
 #  RESET (delete everything for a user)
 # ──────────────────────────────────────────────────────────────────────────
 
-def delete_all_user_data(access_token: str, user_id: str) -> None:
+def delete_all_user_data(access_token: str, user_id: str,
+                         refresh_token: str = "") -> None:
     """Hard-delete all accounting data for a user (used by /reset)."""
-    client = make_client(access_token)
+    client = make_client(access_token, refresh_token)
     client.table("journal_entries").delete().eq("user_id", user_id).execute()
     client.table("chat_history").delete().eq("user_id", user_id).execute()
     client.table("companies").delete().eq("user_id", user_id).execute()
