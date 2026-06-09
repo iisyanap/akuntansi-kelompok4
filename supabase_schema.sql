@@ -53,15 +53,18 @@ ALTER TABLE chat_history     ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users manage own companies"
   ON companies FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users manage own journals"
   ON journal_entries FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users manage own chat"
   ON chat_history FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 -- ── 5. INDEXES (performance) ─────────────────────────────────────────────
 CREATE INDEX idx_journal_user_type   ON journal_entries (user_id, type, sort_order);
