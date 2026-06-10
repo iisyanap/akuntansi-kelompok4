@@ -281,7 +281,7 @@
           {% if loop.first %}
           <td rowspan="{{ e.debit_entries|length + e.kredit_entries|length }}" class="no-print"
             style="vertical-align:middle;">
-            <form method="POST" action="{{ url_for('penyesuaian_delete', idx=loop.index0) }}">
+            <form  method="POST" action="{{ url_for('penyesuaian_delete', entry_id=e.id) }}?company_id={{ company.id }}">
               <button class="btn btn-danger btn-sm">✕</button>
             </form>
           </td>

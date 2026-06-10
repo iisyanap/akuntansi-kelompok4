@@ -12,6 +12,8 @@ import os
 from typing import Optional
 from supabase import create_client, Client
 
+class SessionExpiredError(Exception):
+    pass
 
 # ──────────────────────────────────────────────────────────────────────────
 #  Client factory
@@ -88,6 +90,44 @@ def _row_to_company(row: dict) -> dict:
         "opening_balances": row.get("opening_balances") or {},
     }
 
+def refresh_session(refresh_token: str):
+    client = make_client()
+
+    try:
+        response = client.auth.refresh_session(
+            refresh_token
+        )
+        return response, None
+
+    except Exception as e:
+        return None, str(e)
+
+def execute_with_refresh(
+    operation,
+    access_token: str,
+    refresh_token: str = ""
+):
+    """
+    Jalankan query Supabase.
+    Jika JWT expired → refresh token → ulangi query.
+    """
+
+    try:
+        return operation(access_token)
+
+    except Exception as e:
+
+        if "JWT expired" not in str(e):
+            raise
+
+        if not refresh_token:
+            raise SessionExpiredError(
+                "Session expired. Please login again."
+            )
+
+        tokens = refresh_access_token(refresh_token)
+
+        return operation(tokens["access_token"])
 
 def get_companies(access_token: str, user_id: str,
                   refresh_token: str = "") -> list[dict]:
@@ -133,27 +173,44 @@ def save_company(access_token: str, user_id: str, data: dict,
     - If company_id is provided: update that specific company.
     - If company_id is empty: insert a new company.
     """
-    client = make_client(access_token, refresh_token)
+
     payload = {
-        "user_id":          user_id,
-        "nama":             data.get("nama", ""),
-        "pemilik":          data.get("pemilik", ""),
-        "periode":          data.get("periode", ""),
-        "jenis":            data.get("jenis", ""),
-        "currency":         data.get("currency", "IDR"),
+        "user_id": user_id,
+        "nama": data.get("nama", ""),
+        "pemilik": data.get("pemilik", ""),
+        "periode": data.get("periode", ""),
+        "jenis": data.get("jenis", ""),
+        "currency": data.get("currency", "IDR"),
         "opening_balances": data.get("opening_balances", {}),
     }
-    if company_id:
-        resp = (
+
+    def _operation(token):
+
+        client = make_client(token)
+
+        if company_id:
+            return (
+                client.table("companies")
+                .update(payload)
+                .eq("id", company_id)
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+        return (
             client.table("companies")
-            .update(payload)
-            .eq("id", company_id)
-            .eq("user_id", user_id)
+            .insert(payload)
             .execute()
         )
-    else:
-        resp = client.table("companies").insert(payload).execute()
+
+    resp = execute_with_refresh(
+        _operation,
+        access_token,
+        refresh_token
+    )
+
     rows = resp.data or []
+
     return _row_to_company(rows[0]) if rows else {}
 
 

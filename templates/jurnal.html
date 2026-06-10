@@ -248,8 +248,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
             {% if loop.first %}
             <td rowspan="{{ n_rows }}" class="no-print" style="vertical-align:middle;">
               <form method="POST"
-                    action="{{ url_for('jurnal_delete', idx=loop.index0) }}"
-                    style="display:inline">
+                    action="{{ url_for('jurnal_delete', entry_id=e.id) }}?company_id={{ company.id }}"
+                    style="display:inline;">
                 <button type="submit" class="btn btn-danger btn-sm"
                         onclick="return confirm('Hapus transaksi ini?')">✕</button>
               </form>

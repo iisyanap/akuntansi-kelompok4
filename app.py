@@ -9,6 +9,7 @@ import re as _re
 from functools import wraps
 from flask import (Flask, render_template, request,
                    session, redirect, url_for, jsonify, send_file)
+from logic.database import SessionExpiredError
 
 # Load .env otomatis (pip install python-dotenv)
 try:
@@ -30,6 +31,76 @@ from logic import database as db
 
 # ── App config ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
+def refresh_user_session():
+
+    refresh_token = session.get("refresh_token")
+
+    if not refresh_token:
+        return False
+
+    try:
+
+        tokens = db.refresh_access_token(
+            refresh_token
+        )
+
+        session["access_token"] = tokens["access_token"]
+        session["refresh_token"] = tokens["refresh_token"]
+
+        session.modified = True
+
+        return True
+
+    except Exception:
+        return False
+    
+def save_company(
+    access_token: str,
+    user_id: str,
+    data: dict,
+    company_id: str = "",
+    refresh_token: str = ""
+) -> dict:
+
+    payload = {
+        "user_id": user_id,
+        "nama": data.get("nama", ""),
+        "pemilik": data.get("pemilik", ""),
+        "periode": data.get("periode", ""),
+        "jenis": data.get("jenis", ""),
+        "currency": data.get("currency", "IDR"),
+        "opening_balances": data.get("opening_balances", {}),
+    }
+
+    def _operation(token):
+
+        client = make_client(token)
+
+        if company_id:
+            return (
+                client.table("companies")
+                .update(payload)
+                .eq("id", company_id)
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+        return (
+            client.table("companies")
+            .insert(payload)
+            .execute()
+        )
+
+    resp = execute_with_refresh(
+        _operation,
+        access_token,
+        refresh_token
+    )
+
+    rows = resp.data or []
+
+    return _row_to_company(rows[0]) if rows else {}
+
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "akuntansi_secret_2024")
 
 # Groq API key: baca dari .env, bisa di-override via UI
@@ -86,6 +157,16 @@ def login_required(f):
             return redirect(url_for("auth_page"))
         return f(*args, **kwargs)
     return decorated
+
+@app.errorhandler(SessionExpiredError)
+def handle_session_expired(error):
+
+    session.clear()
+
+    return render_template(
+        "auth.html",
+        error="Sesi login Anda telah berakhir. Silakan login kembali."
+    ), 401
 
 # ── Helpers: Supabase-backed data ──────────────────────────────────────────
 
@@ -184,6 +265,33 @@ def auth_login():
     session["user_email"] = user.email
     session.permanent = True
     return redirect(url_for("dashboard"))
+
+def refresh_access_token(refresh_token: str):
+    """
+    Refresh access token menggunakan refresh token Supabase.
+    Return:
+        {
+            "access_token": "...",
+            "refresh_token": "..."
+        }
+    """
+    client = make_client()
+
+    try:
+        resp = client.auth.refresh_session(refresh_token)
+
+        if not resp or not resp.session:
+            raise SessionExpiredError("Refresh token invalid")
+
+        return {
+            "access_token": resp.session.access_token,
+            "refresh_token": resp.session.refresh_token
+        }
+
+    except Exception:
+        raise SessionExpiredError(
+            "Session expired. Please login again."
+        )
 
 
 @app.route("/auth/register", methods=["POST"])
@@ -359,6 +467,7 @@ def jurnal():
     jurnal_list = _get_journals("jurnal")
     return render_template("jurnal.html",
                            perusahaan=perusahaan,
+                           company=perusahaan,
                            jurnal=jurnal_list,
                            account_codes=ACCOUNT_CODES)
 
@@ -390,13 +499,22 @@ def jurnal_add():
     return jsonify({"success": True, "entry": saved})
 
 
-@app.route("/jurnal/delete/<int:idx>", methods=["POST"])
+@app.route('/jurnal/delete/<string:entry_id>', methods=['POST'])
 @login_required
-def jurnal_delete(idx):
-    db.delete_journal_by_index(
-        _token(), _uid(), idx, "jurnal", refresh_token=_refresh(),
-        company_id=_cid())
-    return redirect(url_for("jurnal"))
+def jurnal_delete(entry_id):
+    comp_id = request.args.get("company_id", "") or _cid()
+    if not comp_id:
+        return redirect(url_for('dashboard'))
+
+    client = db.make_client(_token())
+
+    try:
+        client.table("journal_entries").delete().eq(
+            "id", entry_id).eq("user_id", _uid()).eq("company_id", comp_id).execute()
+    except Exception:
+        pass
+
+    return redirect(url_for('jurnal'))
 
 
 @app.route("/jurnal/clear", methods=["POST"])
@@ -470,6 +588,7 @@ def penyesuaian():
     return render_template("penyesuaian.html",
                            perusahaan=perusahaan, neraca_saldo=ns,
                            jurnal_penyesuaian=jp,
+                           company=perusahaan,
                            account_codes=ACCOUNT_CODES)
 
 
@@ -500,13 +619,22 @@ def penyesuaian_add():
     return jsonify({"success": True, "entry": saved})
 
 
-@app.route("/penyesuaian/delete/<int:idx>", methods=["POST"])
+@app.route('/penyesuaian/delete/<string:entry_id>', methods=['POST'])
 @login_required
-def penyesuaian_delete(idx):
-    db.delete_journal_by_index(
-        _token(), _uid(), idx, "penyesuaian", refresh_token=_refresh(),
-        company_id=_cid())
-    return redirect(url_for("penyesuaian"))
+def penyesuaian_delete(entry_id):
+    comp_id = request.args.get("company_id", "") or _cid()
+    if not comp_id:
+        return redirect(url_for('dashboard'))
+
+    client = db.make_client(_token())
+
+    try:
+        client.table("journal_entries").delete().eq(
+            "id", entry_id).eq("user_id", _uid()).eq("company_id", comp_id).execute()
+    except Exception:
+        pass
+
+    return redirect(url_for('penyesuaian'))
 
 # ── Kertas Kerja ───────────────────────────────────────────────────────────
 
