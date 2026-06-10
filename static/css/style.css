@@ -386,6 +386,73 @@ select option { background: var(--surface); }
   border-radius: var(--radius-sm);
 }
 
+.akun-wrapper { position: relative; flex: 2; }
+.akun-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.akun-input:focus {
+  outline: none;
+  border-color: var(--sky-blue);
+  box-shadow: 0 0 0 3px rgba(98,196,218,0.18);
+}
+.akun-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  z-index: 999;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+.akun-dropdown.show { display: block; }
+.akun-option {
+  padding: 9px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.akun-option:last-child { border-bottom: none; }
+.akun-option:hover, .akun-option.highlighted { background: var(--surface2); }
+.akun-kode {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sky-blue);
+  background: rgba(98,196,218,0.15);
+  padding: 2px 7px;
+  border-radius: 4px;
+  min-width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.akun-nama { color: var(--text); }
+.akun-nama mark {
+  background: rgba(98,196,218,0.25);
+  color: #2F8EA3;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
 /* ── Alerts ────────────────────────────────────────────────────── */
 .alert {
   padding: 12px 16px;

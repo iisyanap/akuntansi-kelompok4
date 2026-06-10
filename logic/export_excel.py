@@ -195,7 +195,7 @@ def export_neraca_saldo(neraca_saldo, perusahaan, currency="IDR"):
     ws.sheet_view.showGridLines = False
     nf = _num_fmt(currency)
 
-    headers   = ["No. Rek", "Nama Akun", "Debit", "Kredit"]
+    headers   = ["No. Akun", "Nama Akun", "Debit", "Kredit"]
     col_widths = [12, 42, 22, 22]
     n_cols = len(headers)
 
@@ -351,8 +351,10 @@ def export_kertas_kerja(kertas_kerja, perusahaan, laba_bersih, currency="IDR"):
                   totals["ns_d"], totals["ns_k"],
                   totals["ajp_d"], totals["ajp_k"],
                   totals["nsd_d"], totals["nsd_k"],
-                  totals["lr_d"]+(laba_bersih if laba_bersih>0 else 0), totals["lr_k"],
-                  totals["ner_d"], totals["ner_k"]+(laba_bersih if laba_bersih>0 else 0)]
+                  totals["lr_d"]+(laba_bersih if laba_bersih>0 else 0),
+                  totals["lr_k"]+(abs(laba_bersih) if laba_bersih<0 else 0),
+                  totals["ner_d"]+(abs(laba_bersih) if laba_bersih<0 else 0),
+                  totals["ner_k"]+(laba_bersih if laba_bersih>0 else 0)]
     for j, v in enumerate(total_vals, 1):
         c = _cell(ws, r, j, v,
                   align="right" if j>2 else ("center" if j==1 else "left"),

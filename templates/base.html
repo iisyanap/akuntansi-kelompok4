@@ -123,6 +123,9 @@
         Mata Uang: <strong>{{ currency }} ({{ currency_symbol }})</strong>
       </div>
       {% endif %}
+      <div class="sidebar-currency">
+        Penyimpanan: <strong>{{ storage_backend }}</strong>
+      </div>
       <form method="POST" action="{{ url_for('reset') }}"
             onsubmit="if(!confirm('Reset semua data?')) return false; localStorage.removeItem('accsys_antrian'); localStorage.removeItem('accsys_sb'); return true;">
         <button type="submit" class="btn-reset">⟳ Reset / Mulai Ulang</button>
@@ -189,6 +192,168 @@ window.globalAddEntry = function(entry) {
   window.aqSave(list);
   if (typeof window.syncAiRightPanel === 'function') window.syncAiRightPanel();
 };
+
+window.ACCSYS_AKUN_DATA = {{ account_options | tojson }};
+window.ACCSYS_NAMA_BULAN = [
+  "Januari","Februari","Maret","April","Mei","Juni",
+  "Juli","Agustus","September","Oktober","November","Desember"
+];
+
+window.accsysFormatDate = function(value) {
+  if (!value) return '';
+  const [y, m, d] = value.split('-');
+  return `${d} ${window.ACCSYS_NAMA_BULAN[parseInt(m, 10) - 1]} ${y}`;
+};
+
+window.accsysParseAmount = function(value) {
+  let s = String(value ?? '').trim().replace(/[^\d,.\-]/g, '');
+  if (!s || s === '-' || s === '.' || s === ',') return 0;
+  const hasDot = s.includes('.');
+  const hasComma = s.includes(',');
+
+  if (hasDot && hasComma) {
+    const decimalSep = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ',';
+    const thousandSep = decimalSep === '.' ? ',' : '.';
+    s = s.split(thousandSep).join('').replace(decimalSep, '.');
+  } else if (hasDot) {
+    const parts = s.split('.');
+    if (parts.length > 1 && parts.slice(1).every(part => part.length === 3)) {
+      s = parts.join('');
+    }
+  } else if (hasComma) {
+    const parts = s.split(',');
+    if (parts.length > 1 && parts.slice(1).every(part => part.length === 3)) {
+      s = parts.join('');
+    } else {
+      s = s.replace(',', '.');
+    }
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+window.accsysBindDatePicker = function(dateInput, hiddenInput, previewEl) {
+  if (!dateInput || !hiddenInput) return;
+  const sync = () => {
+    const formatted = window.accsysFormatDate(dateInput.value);
+    hiddenInput.value = formatted;
+    if (previewEl) previewEl.textContent = formatted ? '✓ ' + formatted : '';
+  };
+  dateInput.addEventListener('change', sync);
+  sync();
+};
+
+window.accsysHighlight = function(text, query) {
+  if (!query) return text;
+  const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+};
+
+window.accsysCleanAccountValue = function(value) {
+  return (value || '').replace(/^\[[^\]]+\]\s*/, '').trim();
+};
+
+window.accsysSetupAkun = function(wrapper) {
+  const input = wrapper?.querySelector('.akun-input');
+  const dropdown = wrapper?.querySelector('.akun-dropdown');
+  if (!input || !dropdown || input.dataset.akunReady === '1') return;
+  input.dataset.akunReady = '1';
+  let hiIdx = -1;
+
+  function selectAkun(kode, nama) {
+    input.value = `[${kode}] ${nama}`;
+    input.dataset.namaAkun = nama;
+    dropdown.classList.remove('show');
+    hiIdx = -1;
+  }
+
+  function renderDropdown(query) {
+    const q = window.accsysCleanAccountValue(query);
+    const results = q
+      ? window.ACCSYS_AKUN_DATA.filter(a =>
+          a.nama.toLowerCase().includes(q.toLowerCase()) ||
+          a.kode.toLowerCase().includes(q.toLowerCase())
+        )
+      : window.ACCSYS_AKUN_DATA;
+    if (!results.length) {
+      dropdown.classList.remove('show');
+      return;
+    }
+    dropdown.innerHTML = results.map((a, i) => `
+      <div class="akun-option" data-kode="${a.kode}" data-nama="${a.nama}" data-idx="${i}">
+        <span class="akun-kode">${a.kode}</span>
+        <span class="akun-nama">${window.accsysHighlight(a.nama, q)}</span>
+      </div>
+    `).join('');
+    dropdown.classList.add('show');
+    hiIdx = -1;
+    dropdown.querySelectorAll('.akun-option').forEach(opt => {
+      opt.addEventListener('mousedown', e => {
+        e.preventDefault();
+        selectAkun(opt.dataset.kode, opt.dataset.nama);
+      });
+    });
+  }
+
+  input.addEventListener('input', () => {
+    input.dataset.namaAkun = '';
+    renderDropdown(input.value.trim());
+  });
+  input.addEventListener('focus', () => renderDropdown(input.value.trim()));
+  input.addEventListener('blur', () => {
+    setTimeout(() => dropdown.classList.remove('show'), 150);
+  });
+  input.addEventListener('keydown', e => {
+    const opts = dropdown.querySelectorAll('.akun-option');
+    if (!opts.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      hiIdx = Math.min(hiIdx + 1, opts.length - 1);
+      opts.forEach((o, i) => o.classList.toggle('highlighted', i === hiIdx));
+      opts[hiIdx]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      hiIdx = Math.max(hiIdx - 1, 0);
+      opts.forEach((o, i) => o.classList.toggle('highlighted', i === hiIdx));
+      opts[hiIdx]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && hiIdx >= 0) {
+      e.preventDefault();
+      const opt = opts[hiIdx];
+      selectAkun(opt.dataset.kode, opt.dataset.nama);
+    } else if (e.key === 'Escape') {
+      dropdown.classList.remove('show');
+    }
+  });
+};
+
+window.accsysInitAkunSearch = function(root = document) {
+  root.querySelectorAll('.akun-wrapper').forEach(window.accsysSetupAkun);
+};
+
+window.accsysAkunValue = function(input) {
+  return input.dataset.namaAkun || window.accsysCleanAccountValue(input.value);
+};
+
+window.accsysNormalizeNamedAccountInputs = function(root = document) {
+  root.querySelectorAll('.akun-input[name]').forEach(input => {
+    input.value = window.accsysAkunValue(input);
+  });
+};
+
+window.accsysAkunInputHtml = function(classes, name = '', placeholder = 'Cari nama/kode akun...', value = '') {
+  const nameAttr = name ? ` name="${name}"` : '';
+  const valueAttr = value ? ` value="${value.replace(/"/g, '&quot;')}"` : '';
+  return `
+    <div class="akun-wrapper">
+      <input type="text" class="akun-input ${classes}"${nameAttr}${valueAttr}
+             placeholder="${placeholder}" autocomplete="off">
+      <div class="akun-dropdown"></div>
+    </div>
+  `;
+};
+
+document.addEventListener('DOMContentLoaded', () => window.accsysInitAkunSearch());
 </script>
 
 {% block scripts %}{% endblock %}

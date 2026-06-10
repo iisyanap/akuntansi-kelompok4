@@ -37,7 +37,9 @@ Aset    : Kas, Piutang Usaha, Perlengkapan, Iklan Dibayar Dimuka,
           Asuransi Dibayar Dimuka, Sewa Dibayar Dimuka,
           Peralatan, Kendaraan, Bangunan,
           Akumulasi Penyusutan Peralatan, Akumulasi Penyusutan Kendaraan
-Utang   : Utang Usaha, Utang Gaji, Pendapatan Diterima Dimuka, Utang Asuransi
+Utang   : Utang Usaha, Utang Gaji, Utang Asuransi,
+          Pendapatan Diterima Dimuka, Asuransi Diterima Dimuka,
+          Sewa Diterima Dimuka
 Ekuitas : Modal, Prive, Ikhtisar Laba Rugi
 Pendptn : Pendapatan Jasa, Pendapatan Sewa
 Beban   : Beban Gaji, Beban Sewa, Beban Iklan, Beban Asuransi,

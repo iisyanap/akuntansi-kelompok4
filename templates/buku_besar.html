@@ -24,9 +24,9 @@
     <div style="text-align:right;">
       {% set last = rows[-1] %}
       {% if last.saldo_d %}
-        <span class="badge badge-debit">SALDO D: Rp {{ last.saldo_d | fmt_currency(currency) }}</span>
+        <span class="badge badge-debit">SALDO D: {{ last.saldo_d | fmt_currency(currency) }}</span>
       {% elif last.saldo_k %}
-        <span class="badge badge-kredit">SALDO K: Rp {{ last.saldo_k | fmt_currency(currency) }}</span>
+        <span class="badge badge-kredit">SALDO K: {{ last.saldo_k | fmt_currency(currency) }}</span>
       {% endif %}
     </div>
   </div>

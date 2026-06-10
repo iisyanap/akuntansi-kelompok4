@@ -21,9 +21,9 @@
 </div>
 
 {% if laba_bersih >= 0 %}
-<div class="alert alert-success">✓ Laba Bersih Periode ini: <strong>Rp {{ laba_bersih | fmt_currency(currency) }}</strong></div>
+<div class="alert alert-success">✓ Laba Bersih Periode ini: <strong>{{ laba_bersih | fmt_currency(currency) }}</strong></div>
 {% else %}
-<div class="alert alert-error">✗ Rugi Bersih Periode ini: <strong>Rp {{ laba_bersih|abs | fmt_currency(currency) }}</strong></div>
+<div class="alert alert-error">✗ Rugi Bersih Periode ini: <strong>{{ laba_bersih|abs | fmt_currency(currency) }}</strong></div>
 {% endif %}
 
 <div class="card" style="padding:0; overflow:hidden;">
@@ -107,10 +107,10 @@
           <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--warn); border-right:1px solid var(--border);">{{ total.ajp_k | fmt_currency(currency) }}</td>
           <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--danger);">{{ total.nsd_d | fmt_currency(currency) }}</td>
           <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--accent2); border-right:1px solid var(--border);">{{ total.nsd_k | fmt_currency(currency) }}</td>
-          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--danger);">{{ "{:,.0f}".format(total.lr_d + (laba_bersih if laba_bersih > 0 else 0)) }}</td>
-          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--accent2); border-right:1px solid var(--border);">{{ total.lr_k | fmt_currency(currency) }}</td>
-          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--danger);">{{ total.ner_d | fmt_currency(currency) }}</td>
-          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--accent2);">{{ "{:,.0f}".format(total.ner_k + (laba_bersih if laba_bersih > 0 else 0)) }}</td>
+          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--danger);">{{ (total.lr_d + (laba_bersih if laba_bersih > 0 else 0)) | fmt_currency(currency) }}</td>
+          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--accent2); border-right:1px solid var(--border);">{{ (total.lr_k + (laba_bersih|abs if laba_bersih < 0 else 0)) | fmt_currency(currency) }}</td>
+          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--danger);">{{ (total.ner_d + (laba_bersih|abs if laba_bersih < 0 else 0)) | fmt_currency(currency) }}</td>
+          <td style="text-align:right; font-family:var(--mono); font-size:11px; color:var(--accent2);">{{ (total.ner_k + (laba_bersih if laba_bersih > 0 else 0)) | fmt_currency(currency) }}</td>
         </tr>
       </tbody>
     </table>

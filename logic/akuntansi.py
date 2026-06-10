@@ -9,7 +9,8 @@ ACCOUNT_CODES = {
     "Akumulasi Penyusutan Kendaraan": "122.1",
     "Akumulasi Penyusutan Bangunan": "123.1",
     "Utang Usaha": "211", "Utang Bank": "212", "Utang Gaji": "213",
-    "Pendapatan Diterima Dimuka": "213", "Utang Asuransi": "214",
+    "Utang Asuransi": "214", "Pendapatan Diterima Dimuka": "215",
+    "Asuransi Diterima Dimuka": "216", "Sewa Diterima Dimuka": "217",
     "Modal": "311", "Prive": "312", "Ikhtisar Laba Rugi": "313",
     "Pendapatan Jasa": "411", "Pendapatan Sewa": "412",
     "Beban Gaji": "511", "Beban Sewa": "512", "Beban Iklan": "513",
@@ -22,8 +23,16 @@ ACCOUNT_CODES = {
 def get_account_type(account_name):
     """Tentukan tipe akun: asset/liability/equity/revenue/expense"""
     n = account_name.lower()
-    if any(x in n for x in ["akumulasi", "utang", "diterima dimuka", "pendapatan diterima"]):
-        return "liability" if "utang" in n or "diterima dimuka" in n else "contra_asset"
+    if "beban" in n or "expense" in n:
+        return "expense"
+    if any(x in n for x in ["pendapatan diterima dimuka", "asuransi diterima dimuka", "sewa diterima dimuka"]):
+        return "liability"
+    if "pendapatan" in n or "revenue" in n:
+        return "revenue"
+    if "akumulasi" in n:
+        return "contra_asset"
+    if n.startswith("utang ") or " utang " in f" {n} ":
+        return "liability"
     if any(x in n for x in ["kas", "piutang", "perlengkapan", "peralatan", "kendaraan",
                               "bangunan", "dibayar dimuka", "asuransi dibayar", "iklan dibayar",
                               "sewa dibayar"]):
@@ -32,10 +41,6 @@ def get_account_type(account_name):
         return "equity"
     if "prive" in n or "ikhtisar" in n:
         return "drawing"
-    if "pendapatan" in n or "revenue" in n:
-        return "revenue"
-    if "beban" in n or "expense" in n:
-        return "expense"
     return "asset"
 
 def normal_balance(account_name):
@@ -115,6 +120,9 @@ def build_buku_besar(jurnal_entries, jurnal_penyesuaian=None, opening_balances=N
 # ── Neraca Saldo ───────────────────────────────────────────────────────────
 def build_neraca_saldo(buku_besar):
     """Ambil saldo akhir tiap akun dari buku besar"""
+    def kode_sort_key(kode):
+        return [int(part) if part.isdigit() else 999 for part in str(kode).split(".")]
+
     result = []
     for acc, rows in buku_besar.items():
         last = rows[-1]
@@ -127,7 +135,7 @@ def build_neraca_saldo(buku_besar):
                 "debit": d,
                 "kredit": k
             })
-    result.sort(key=lambda x: x["kode"])
+    result.sort(key=lambda x: (kode_sort_key(x["kode"]), x["akun"].lower()))
     return result
 
 # ── Kertas Kerja ───────────────────────────────────────────────────────────

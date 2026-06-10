@@ -31,6 +31,8 @@ const AKUN_DATA = [
   { kode: "213",   nama: "Utang Gaji" },
   { kode: "214",   nama: "Utang Asuransi" },
   { kode: "215",   nama: "Pendapatan Diterima Dimuka" },
+  { kode: "216",   nama: "Asuransi Diterima Dimuka" },
+  { kode: "217",   nama: "Sewa Diterima Dimuka" },
   { kode: "311",   nama: "Modal" },
   { kode: "312",   nama: "Prive" },
   { kode: "313",   nama: "Ikhtisar Laba Rugi" },
@@ -133,8 +135,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
             <div class="akun-dropdown"></div>
             <div class="akun-selected-badge"></div>
           </div>
-          <input type="number" class="d-amt" placeholder="Jumlah"
-                 min="0" style="flex:1" oninput="calcTotals()">
+          <input type="text" inputmode="decimal" class="d-amt" placeholder="Jumlah"
+                 style="flex:1" oninput="calcTotals()">
           <button type="button" class="btn btn-danger btn-remove btn-sm"
                   onclick="removeRow(this)" style="margin-top:2px;">✕</button>
         </div>
@@ -153,8 +155,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
             <div class="akun-dropdown"></div>
             <div class="akun-selected-badge"></div>
           </div>
-          <input type="number" class="k-amt" placeholder="Jumlah"
-                 min="0" style="flex:1" oninput="calcTotals()">
+          <input type="text" inputmode="decimal" class="k-amt" placeholder="Jumlah"
+                 style="flex:1" oninput="calcTotals()">
           <button type="button" class="btn btn-danger btn-remove btn-sm"
                   onclick="removeRow(this)" style="margin-top:2px;">✕</button>
         </div>
@@ -232,6 +234,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         {% set total_d = namespace(v=0) %}
         {% set total_k = namespace(v=0) %}
         {% for e in jurnal %}
+          {% set trx_id = e.id if e.id is defined else loop.index0 %}
           {% set n_rows = e.debit_entries|length + e.kredit_entries|length %}
           {% for i, item in e.debit_entries | enumerate %}
           <tr>
@@ -248,7 +251,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
             {% if loop.first %}
             <td rowspan="{{ n_rows }}" class="no-print" style="vertical-align:middle;">
               <form method="POST"
-                    action="{{ url_for('jurnal_delete', idx=loop.index0) }}"
+                    action="{{ url_for('jurnal_delete', entry_id=trx_id) }}"
                     style="display:inline">
                 <button type="submit" class="btn btn-danger btn-sm"
                         onclick="return confirm('Hapus transaksi ini?')">✕</button>
@@ -424,8 +427,8 @@ function makeAkunRow(amtClass) {
       <div class="akun-dropdown"></div>
       <div class="akun-selected-badge"></div>
     </div>
-    <input type="number" class="${amtClass}" placeholder="Jumlah"
-           min="0" style="flex:1" oninput="calcTotals()">
+    <input type="text" inputmode="decimal" class="${amtClass}" placeholder="Jumlah"
+           style="flex:1" oninput="calcTotals()">
     <button type="button" class="btn btn-danger btn-remove btn-sm"
             onclick="removeRow(this)" style="margin-top:2px;">✕</button>
   `;
@@ -447,8 +450,8 @@ function removeRow(btn) {
 // ── Balance check ─────────────────────────────────────────────────────────
 function calcTotals() {
   let d = 0, k = 0;
-  document.querySelectorAll('.d-amt').forEach(i => d += parseFloat(i.value||0));
-  document.querySelectorAll('.k-amt').forEach(i => k += parseFloat(i.value||0));
+  document.querySelectorAll('.d-amt').forEach(i => d += window.accsysParseAmount(i.value));
+  document.querySelectorAll('.k-amt').forEach(i => k += window.accsysParseAmount(i.value));
   document.getElementById('total-d').textContent = fmt(d);
   document.getElementById('total-k').textContent = fmt(k);
   const s = document.getElementById('balance-status');

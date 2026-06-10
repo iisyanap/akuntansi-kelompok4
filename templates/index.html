@@ -1,15 +1,65 @@
 {% extends "base.html" %}
-{% block title %}Setup Perusahaan{% endblock %}
+{% block title %}{% if show_setup %}Setup Perusahaan{% else %}Pilih Perusahaan{% endif %}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>⚙️ Setup Perusahaan</h1>
+  {% if show_setup %}
+  <h1>Setup Perusahaan</h1>
   <p>Isi data perusahaan sebelum memulai siklus akuntansi</p>
+  {% else %}
+  <h1>Pilih Perusahaan</h1>
+  <p>Lanjutkan pencatatan akuntansi dari perusahaan yang sudah pernah dibuat</p>
+  {% endif %}
 </div>
 
-<div style="max-width: 720px;">
-  <form method="POST" action="{{ url_for('setup') }}" id="setup-form">
+{% if not show_setup %}
+<div style="max-width: 920px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+    <div style="font-size:13px; color:var(--text2);">
+      Ada <strong style="color:var(--text);">{{ companies|length }}</strong> perusahaan tersimpan.
+    </div>
+    <a href="{{ url_for('company_new') }}" class="btn btn-primary">+ Perusahaan Baru</a>
+  </div>
 
-    <!-- INFO PERUSAHAAN -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+    {% for company in companies %}
+      {% set item = company.data %}
+      {% set p = item.perusahaan %}
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-title">Perusahaan</div>
+        <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:8px;">
+          {{ p.nama }}
+        </div>
+        <div style="font-size:13px; color:var(--text2); line-height:1.8; margin-bottom:14px;">
+          <div>Pemilik: <strong>{{ p.pemilik or '-' }}</strong></div>
+          <div>Periode: <strong>{{ p.periode or '-' }}</strong></div>
+          <div>Jenis: <strong>{{ p.jenis or '-' }}</strong></div>
+          <div>Mata uang: <strong>{{ p.currency or 'IDR' }}</strong></div>
+          <div>Transaksi: <strong>{{ item.jurnal|length }}</strong> entri</div>
+          <div>Terakhir diubah: <strong>{{ company.updated_at or '-' }}</strong></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <form method="POST" action="{{ url_for('company_select', company_id=company.id) }}">
+            <button type="submit" class="btn btn-success btn-sm">Lanjutkan</button>
+          </form>
+          <a href="{{ url_for('company_edit', company_id=company.id) }}" class="btn btn-ghost btn-sm">Edit Setup</a>
+          <form method="POST" action="{{ url_for('company_delete', company_id=company.id) }}"
+                onsubmit="return confirm('Hapus data perusahaan ini?')">
+            <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div style="max-width: 720px;">
+  {% if companies %}
+  <div style="margin-bottom:16px;">
+    <a href="{{ url_for('index') }}" class="btn btn-ghost btn-sm">&larr; Kembali ke Daftar Perusahaan</a>
+  </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('setup') }}" id="setup-form">
     <div class="card">
       <div class="card-title">Informasi Perusahaan</div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
@@ -40,22 +90,19 @@
         <div class="form-group">
           <label>Mata Uang</label>
           <select name="currency">
-            <option value="IDR" {% if perusahaan.currency != 'USD' %}selected{% endif %}>🇮🇩 Rupiah (IDR — Rp)</option>
-            <option value="USD" {% if perusahaan.currency == 'USD' %}selected{% endif %}>🇺🇸 Dollar (USD — $)</option>
+            <option value="IDR" {% if perusahaan.currency != 'USD' %}selected{% endif %}>Rupiah (IDR - Rp)</option>
+            <option value="USD" {% if perusahaan.currency == 'USD' %}selected{% endif %}>Dollar (USD - $)</option>
           </select>
         </div>
       </div>
     </div>
 
-    <!-- SALDO AWAL -->
     <div class="card">
       <div class="card-title">Saldo Awal (Opsional)</div>
       <p style="font-size:12px; color:var(--text2); margin-bottom:16px;">
-        Isi jika ada neraca saldo dari periode sebelumnya (seperti Latihan 2).
-        Kosongkan jika perusahaan baru.
+        Isi jika ada neraca saldo dari periode sebelumnya. Kosongkan jika perusahaan baru.
       </p>
 
-      <!-- Header kolom -->
       {% if opening_balances %}
       <div style="display:flex; gap:8px; margin-bottom:6px; padding:0 4px;">
         <span style="flex:2; font-size:11px; color:var(--text3); font-weight:600;">NAMA AKUN</span>
@@ -66,22 +113,24 @@
       {% endif %}
 
       <div id="ob-list">
-        <!-- Render saldo awal yang sudah tersimpan -->
         {% for akun, saldo in opening_balances.items() %}
         <div class="entry-row" style="margin-bottom:8px;">
-          <input type="text" name="ob_account"
-                 value="{{ akun }}"
-                 placeholder="Nama Akun (cth: Kas)" style="flex:2">
-          <input type="number" name="ob_debit"
+          <div class="akun-wrapper">
+            <input type="text" class="akun-input" name="ob_account"
+                   value="{{ akun }}"
+                   placeholder="Cari nama/kode akun..." autocomplete="off">
+            <div class="akun-dropdown"></div>
+          </div>
+          <input type="text" inputmode="decimal" name="ob_debit"
                  value="{{ saldo.debit | int if saldo.debit else '' }}"
-                 placeholder="Debit" min="0" style="flex:1">
-          <input type="number" name="ob_kredit"
+                 placeholder="Debit" style="flex:1">
+          <input type="text" inputmode="decimal" name="ob_kredit"
                  value="{{ saldo.kredit | int if saldo.kredit else '' }}"
-                 placeholder="Kredit" min="0" style="flex:1">
+                 placeholder="Kredit" style="flex:1">
           <button type="button"
                   class="btn btn-danger btn-remove btn-sm"
                   onclick="this.parentElement.remove()"
-                  style="width:32px; height:32px; padding:0; flex-shrink:0;">✕</button>
+                  style="width:32px; height:32px; padding:0; flex-shrink:0;">x</button>
         </div>
         {% endfor %}
       </div>
@@ -91,15 +140,14 @@
         + Tambah Akun Saldo Awal
       </button>
 
-      <!-- Ringkasan saldo awal yang tersimpan -->
       {% if opening_balances %}
       <div style="margin-top:14px; padding:10px 14px; background:rgba(56,217,169,0.07);
                   border:1px solid rgba(56,217,169,0.2); border-radius:6px; font-size:12px;">
         <span style="color:var(--accent2); font-weight:600;">
-          ✓ {{ opening_balances | length }} akun saldo awal tersimpan
+          {{ opening_balances | length }} akun saldo awal tersimpan
         </span>
         <span style="color:var(--text3); margin-left:12px;">
-          (akan ikut terbawa ke Buku Besar & Neraca Saldo)
+          (akan ikut terbawa ke Buku Besar dan Neraca Saldo)
         </span>
       </div>
       {% endif %}
@@ -107,46 +155,50 @@
 
     <button type="submit" class="btn btn-primary"
             style="width:100%; justify-content:center; padding:12px;">
-      💾 Simpan Setup
+      Simpan Setup
     </button>
   </form>
 
-  <!-- Tombol lanjut (hanya tampil kalau sudah ada data) -->
   {% if perusahaan and perusahaan.nama %}
   <div style="margin-top:16px;" class="card">
-    <div class="card-title">Data Tersimpan</div>
+    <div class="card-title">Data Aktif</div>
     <div style="font-size:13px; color:var(--text2); margin-bottom:12px;">
-      <span style="color:var(--accent2);">✓</span>
       <strong style="color:var(--text);">{{ perusahaan.nama }}</strong>
-      &nbsp;·&nbsp; Pemilik: {{ perusahaan.pemilik }}
-      &nbsp;·&nbsp; Periode: {{ perusahaan.periode }}
-      &nbsp;·&nbsp; Mata Uang: <strong>{{ perusahaan.currency or 'IDR' }}</strong>
+      &nbsp;-&nbsp; Pemilik: {{ perusahaan.pemilik }}
+      &nbsp;-&nbsp; Periode: {{ perusahaan.periode }}
+      &nbsp;-&nbsp; Mata Uang: <strong>{{ perusahaan.currency or 'IDR' }}</strong>
       {% if opening_balances %}
-      &nbsp;·&nbsp; Saldo Awal: <span style="color:var(--accent2);">{{ opening_balances | length }} akun</span>
+      &nbsp;-&nbsp; Saldo Awal: <span style="color:var(--accent2);">{{ opening_balances | length }} akun</span>
       {% endif %}
     </div>
-    <a href="{{ url_for('jurnal') }}" class="btn btn-success">→ Lanjut ke Jurnal Umum</a>
+    <a href="{{ url_for('jurnal') }}" class="btn btn-success">Lanjut ke Jurnal Umum</a>
   </div>
   {% endif %}
 </div>
+{% endif %}
 
 <script>
 function addOBRow() {
   const list = document.getElementById('ob-list');
+  if (!list) return;
   const row  = document.createElement('div');
   row.className = 'entry-row';
   row.style.marginBottom = '8px';
   row.innerHTML = `
-    <input type="text"   name="ob_account" placeholder="Nama Akun (cth: Kas)"  style="flex:2">
-    <input type="number" name="ob_debit"   placeholder="Debit"  min="0" style="flex:1">
-    <input type="number" name="ob_kredit"  placeholder="Kredit" min="0" style="flex:1">
+    ${window.accsysAkunInputHtml('', 'ob_account')}
+    <input type="text" inputmode="decimal" name="ob_debit"   placeholder="Debit"  style="flex:1">
+    <input type="text" inputmode="decimal" name="ob_kredit"  placeholder="Kredit" style="flex:1">
     <button type="button" class="btn btn-danger btn-remove btn-sm"
             onclick="this.parentElement.remove()"
-            style="width:32px; height:32px; padding:0; flex-shrink:0;">✕</button>
+            style="width:32px; height:32px; padding:0; flex-shrink:0;">x</button>
   `;
   list.appendChild(row);
-  // fokus ke input akun yang baru ditambah
+  window.accsysInitAkunSearch(row);
   row.querySelector('input[name="ob_account"]').focus();
 }
+
+document.getElementById('setup-form')?.addEventListener('submit', function() {
+  window.accsysNormalizeNamedAccountInputs(this);
+});
 </script>
 {% endblock %}

@@ -36,7 +36,7 @@
     {% endfor %}
     <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--border); font-weight:700; margin-top:4px;">
       <span>Total Pendapatan</span>
-      <span style="font-family:var(--mono); color:var(--accent2);">Rp {{ lr.total_pendapatan | fmt_currency(currency) }}</span>
+      <span style="font-family:var(--mono); color:var(--accent2);">{{ lr.total_pendapatan | fmt_currency(currency) }}</span>
     </div>
 
     <div style="font-weight:600; color:var(--danger); margin:16px 0 8px; font-size:13px;">BEBAN USAHA</div>
@@ -48,14 +48,14 @@
     {% endfor %}
     <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--border); font-weight:700; margin-top:4px;">
       <span>Total Beban</span>
-      <span style="font-family:var(--mono); color:var(--danger);">Rp {{ lr.total_beban | fmt_currency(currency) }}</span>
+      <span style="font-family:var(--mono); color:var(--danger);">{{ lr.total_beban | fmt_currency(currency) }}</span>
     </div>
 
     <div style="display:flex; justify-content:space-between; padding:12px 16px; border-radius:8px; font-weight:700; font-size:15px; margin-top:8px;
       {% if lr.laba_bersih >= 0 %}background:rgba(56,217,169,0.1); border:1px solid rgba(56,217,169,0.3);{% else %}background:rgba(247,111,111,0.1); border:1px solid rgba(247,111,111,0.3);{% endif %}">
       <span>{% if lr.laba_bersih >= 0 %}LABA BERSIH{% else %}RUGI BERSIH{% endif %}</span>
       <span style="font-family:var(--mono); {% if lr.laba_bersih >= 0 %}color:var(--accent2){% else %}color:var(--danger){% endif %};">
-        Rp {{ lr.laba_bersih|abs | fmt_currency(currency) }}
+        {{ lr.laba_bersih|abs | fmt_currency(currency) }}
       </span>
     </div>
   </div>
@@ -89,7 +89,7 @@
     {% endif %}
     <div style="display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--border); font-weight:700; margin-top:4px;">
       <span>Modal Akhir</span>
-      <span style="font-family:var(--mono); color:var(--accent);">Rp {{ pm.modal_akhir | fmt_currency(currency) }}</span>
+      <span style="font-family:var(--mono); color:var(--accent);">{{ pm.modal_akhir | fmt_currency(currency) }}</span>
     </div>
   </div>
 </div>
