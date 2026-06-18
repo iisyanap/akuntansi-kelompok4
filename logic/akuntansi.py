@@ -105,7 +105,7 @@ def build_buku_besar(jurnal_entries, jurnal_penyesuaian=None, opening_balances=N
             running[acc]["kredit"] = k
             nb = normal_balance(acc, accounts)
             saldo_d = d - k if nb == "debit" else 0
-            saldo_k = k - d if nb == "kredit" else 0
+            saldo_k = k - d if nb == "credit" else 0
             ledger[acc].append({
                 "tanggal": "Saldo Awal", "keterangan": "Saldo Awal",
                 "ref": "-", "debit": d if d else "", "kredit": k if k else "",
